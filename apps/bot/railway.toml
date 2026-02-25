@@ -1,0 +1,18 @@
+# railway.toml — Configuração do deploy no Railway
+# Docs: https://docs.railway.com/reference/config-as-code
+#
+# Setup:
+#   1. railway.app → New Project → Deploy from GitHub repo
+#   2. Settings → Source Repo → Root Directory: apps/bot
+#   3. Adicionar serviço Redis (New → Database → Redis)
+#   4. Configurar variáveis de ambiente (ver SESSION_LOG.md)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

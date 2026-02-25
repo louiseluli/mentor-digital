@@ -1,0 +1,30 @@
+# Testes e artefatos de desenvolvimento
+tests/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+*.py[cod]
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Segredos — variáveis de ambiente vêm do Railway, não de arquivos
+.env
+*.env
+!.env.example
+
+# Documentação e metadados
+*.md
+*.txt
+!requirements-prod.txt
+
+# Artefatos de build Python
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+logs/

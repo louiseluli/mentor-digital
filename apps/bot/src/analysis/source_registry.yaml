@@ -1,0 +1,267 @@
+# source_registry.yaml — Registro de fontes de fact-check confiáveis
+#
+# Usado para: enriquecer resultados da Google Fact Check API com metadados locais,
+# e futuramente para validar se um domínio enviado pelo usuário é uma fonte conhecida.
+#
+# Campos:
+#   id:          Identificador único (snake_case)
+#   name:        Nome exibível
+#   domain:      Domínio principal (sem https://)
+#   country:     Código ISO 3166-1 alpha-2
+#   languages:   Idiomas cobertos (lista de BCP-47)
+#   ifcn:        Signatária da IFCN (International Fact-Checking Network)? true/false
+#   focus:       Temas principais (lista livre)
+#   notes:       Observações opcionais
+
+sources:
+
+  # ── Brasil ───────────────────────────────────────────────────────────────────
+
+  - id: agencia_lupa
+    name: Agência Lupa
+    domain: lupa.news
+    country: BR
+    languages: [pt]
+    ifcn: true
+    focus: [política, saúde, redes_sociais, eleições]
+    notes: Primeira agência de fact-checking do Brasil (2015)
+
+  - id: aos_fatos
+    name: Aos Fatos
+    domain: aosfatos.org
+    country: BR
+    languages: [pt]
+    ifcn: true
+    focus: [política, saúde, economia, ciência]
+    notes: Especializada em jornalismo de dados
+
+  - id: agencia_publica
+    name: Agência Pública
+    domain: apublica.org
+    country: BR
+    languages: [pt]
+    ifcn: false
+    focus: [direitos_humanos, raça, gênero, política]
+    notes: Jornalismo investigativo independente; parceiro de dados sociais
+
+  - id: e_farsas
+    name: E-Farsas
+    domain: e-farsas.com
+    country: BR
+    languages: [pt]
+    ifcn: false
+    focus: [boatos, hoaxes, redes_sociais]
+    notes: Foco em boatos virais do WhatsApp e Facebook
+
+  - id: boatos_org
+    name: Boatos.org
+    domain: boatos.org
+    country: BR
+    languages: [pt]
+    ifcn: false
+    focus: [boatos, saúde, política]
+    notes: Verificação de boatos populares
+
+  - id: comprova
+    name: Projeto Comprova
+    domain: projetocomprova.com.br
+    country: BR
+    languages: [pt]
+    ifcn: true
+    focus: [eleições, política, governo]
+    notes: Coalizão de veículos de mídia brasileira
+
+  - id: fato_ou_fake_g1
+    name: Fato ou Fake (G1/Globo)
+    domain: g1.globo.com
+    country: BR
+    languages: [pt]
+    ifcn: false
+    focus: [política, saúde, segurança_pública]
+    notes: Serviço de verificação do Grupo Globo
+
+  - id: uol_confere
+    name: UOL Confere
+    domain: noticias.uol.com.br
+    country: BR
+    languages: [pt]
+    ifcn: false
+    focus: [política, economia, saúde]
+
+  - id: estadao_verifica
+    name: Estadão Verifica
+    domain: estadao.com.br
+    country: BR
+    languages: [pt]
+    ifcn: true
+    focus: [política, eleições, saúde]
+
+  # ── Portugal ─────────────────────────────────────────────────────────────────
+
+  - id: observador_fact_check
+    name: Observador Fact Check
+    domain: observador.pt
+    country: PT
+    languages: [pt]
+    ifcn: false
+    focus: [política, saúde, economia]
+
+  - id: polígrafo
+    name: Polígrafo
+    domain: poligrafo.sapo.pt
+    country: PT
+    languages: [pt]
+    ifcn: true
+    focus: [política, saúde, economia]
+    notes: Primeiro fact-checker português signatário da IFCN
+
+  # ── Internacional (EN) ───────────────────────────────────────────────────────
+
+  - id: afp_fact_check
+    name: AFP Fact Check
+    domain: factcheck.afp.com
+    country: INTL
+    languages: [en, pt, fr, es, ar, de, it, zh]
+    ifcn: true
+    focus: [política, saúde, ciência, conflitos]
+    notes: Cobertura global com versões em português brasileiro
+
+  - id: reuters_fact_check
+    name: Reuters Fact Check
+    domain: reuters.com
+    country: INTL
+    languages: [en]
+    ifcn: true
+    focus: [política, saúde, ciência, conflitos]
+
+  - id: politifact
+    name: PolitiFact
+    domain: politifact.com
+    country: US
+    languages: [en]
+    ifcn: true
+    focus: [política, eleições, governo]
+    notes: Pulitzer Prize 2009; escala de veracidade "Truth-O-Meter"
+
+  - id: snopes
+    name: Snopes
+    domain: snopes.com
+    country: US
+    languages: [en]
+    ifcn: true
+    focus: [boatos, cultura_pop, saúde, política]
+    notes: Referência histórica para fact-checking de boatos na internet
+
+  - id: full_fact
+    name: Full Fact
+    domain: fullfact.org
+    country: GB
+    languages: [en]
+    ifcn: true
+    focus: [política, saúde, crime, economia]
+
+  - id: factcheck_org
+    name: FactCheck.org
+    domain: factcheck.org
+    country: US
+    languages: [en]
+    ifcn: true
+    focus: [política, eleições, governo]
+
+  - id: washington_post_fact_checker
+    name: Washington Post Fact Checker
+    domain: washingtonpost.com
+    country: US
+    languages: [en]
+    ifcn: false
+    focus: [política, governo]
+    notes: Sistema de Pinocchios
+
+  # ── França / Francófono ──────────────────────────────────────────────────────
+
+  - id: les_decodeurs
+    name: Les Décodeurs (Le Monde)
+    domain: lemonde.fr
+    country: FR
+    languages: [fr]
+    ifcn: false
+    focus: [política, ciência, economia]
+
+  - id: liberation_checknews
+    name: CheckNews (Libération)
+    domain: liberation.fr
+    country: FR
+    languages: [fr]
+    ifcn: false
+    focus: [política, redes_sociais, saúde]
+
+  - id: afp_factuel
+    name: AFP Factuel
+    domain: factuel.afp.com
+    country: FR
+    languages: [fr]
+    ifcn: true
+    focus: [política, saúde, ciência]
+
+  # ── Espanha / Hispanófono ─────────────────────────────────────────────────────
+
+  - id: maldita_es
+    name: Maldita.es
+    domain: maldita.es
+    country: ES
+    languages: [es]
+    ifcn: true
+    focus: [política, saúde, migração, redes_sociais]
+    notes: Referência europeia em fact-checking em espanhol
+
+  - id: verificado_mx
+    name: Verificado (México)
+    domain: verificado.mx
+    country: MX
+    languages: [es]
+    ifcn: false
+    focus: [política, eleições, saúde]
+
+  - id: chequeado
+    name: Chequeado
+    domain: chequeado.com
+    country: AR
+    languages: [es]
+    ifcn: true
+    focus: [política, economia, saúde]
+    notes: Referência na América Latina em espanhol
+
+  - id: colombia_check
+    name: Colombia Check
+    domain: colombiacheck.com
+    country: CO
+    languages: [es]
+    ifcn: true
+    focus: [política, paz, saúde]
+
+  # ── Saúde / Ciência (global) ─────────────────────────────────────────────────
+
+  - id: health_feedback
+    name: Health Feedback
+    domain: healthfeedback.org
+    country: INTL
+    languages: [en]
+    ifcn: true
+    focus: [saúde, medicina, covid, vacinação]
+    notes: Parte da Science Feedback; revisores são cientistas credenciados
+
+  - id: science_feedback
+    name: Science Feedback
+    domain: sciencefeedback.co
+    country: INTL
+    languages: [en]
+    ifcn: true
+    focus: [ciência, clima, covid]
+
+  - id: climate_feedback
+    name: Climate Feedback
+    domain: climatefeedback.org
+    country: INTL
+    languages: [en]
+    ifcn: true
+    focus: [clima, meio_ambiente]

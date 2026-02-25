@@ -1,0 +1,226 @@
+# questioning.yaml — Fluxo completo de questionamento do Mentor Digital
+# NUNCA usar: "falso", "fake", "mentira", "errado", "burro", "ignorante", "ingênuo"
+# Máximo 300 caracteres por mensagem (WhatsApp readability)
+
+flow:
+
+  # ── SAUDAÇÃO ────────────────────────────────────────────────────────────────
+  greeting:
+    message: "Para te ajudar a pensar melhor antes de compartilhar, tenho uma pergunta:"
+    follow_up:
+      message: "Qual o seu principal motivo para querer compartilhar este conteúdo?"
+      type: "list"
+      options:
+        - id: "inform"
+          title: "Para informar as pessoas"
+          next_state: "exploring_inform"
+        - id: "alert"
+          title: "Para alertar sobre algo importante"
+          next_state: "exploring_alert"
+        - id: "opinion"
+          title: "Para expressar minha opinião"
+          next_state: "exploring_opinion"
+        - id: "identify"
+          title: "Me identifico com a mensagem"
+          next_state: "exploring_identify"
+        - id: "seen_many"
+          title: "Vi em vários lugares"
+          next_state: "exploring_seen_many"
+        - id: "other"
+          title: "Outro motivo"
+          next_state: "exploring_other"
+
+  # ── EXPLORAÇÃO DE MOTIVAÇÃO ─────────────────────────────────────────────────
+  exploring_inform:
+    message: "Que bom que você quer informar! Para que a informação seja a mais precisa possível, você já pensou de onde ela veio e quem a produziu?"
+    type: "buttons"
+    options:
+      - id: "trust_source"
+        title: "Confio na fonte"
+        next_state: "deepening_trust"
+      - id: "unknown_source"
+        title: "Não sei bem a fonte"
+        next_state: "deepening_unknown_source"
+      - id: "didnt_think"
+        title: "Não pensei nisso"
+        next_state: "deepening_unknown_source"
+
+  exploring_alert:
+    message: "É ótimo querer alertar! Que emoção essa notícia te provoca? Identificar o que sentimos ajuda a pensar com mais clareza."
+    type: "buttons"
+    options:
+      - id: "fear"
+        title: "Medo ou preocupação"
+        next_state: "deepening_fear"
+      - id: "anger"
+        title: "Raiva ou indignação"
+        next_state: "deepening_anger"
+      - id: "surprise"
+        title: "Surpresa ou choque"
+        next_state: "closing"
+
+  exploring_opinion:
+    message: "Sua opinião é importante! Às vezes, quando sentimos algo forte sobre um assunto, isso pode influenciar como vemos as informações. Essa notícia confirma algo que você já acreditava?"
+    type: "buttons"
+    options:
+      - id: "yes_confirms"
+        title: "Sim, confirma"
+        next_state: "deepening_confirms"
+      - id: "no_new"
+        title: "Não, é informação nova"
+        next_state: "closing"
+      - id: "not_sure"
+        title: "Não tenho certeza"
+        next_state: "closing"
+
+  exploring_identify:
+    message: "É natural nos conectarmos com mensagens que falam da nossa experiência. Você sabe quem criou esse conteúdo? Às vezes mensagens são criadas para parecer próximas quando na verdade não são."
+    type: "buttons"
+    options:
+      - id: "know_origin"
+        title: "Sei quem criou"
+        next_state: "closing"
+      - id: "forwarded"
+        title: "Foi encaminhada"
+        next_state: "deepening_forwarded"
+      - id: "social_media"
+        title: "Vi em rede social"
+        next_state: "closing"
+
+  exploring_seen_many:
+    message: "Quando vemos algo em muitos lugares, parece mais verdadeiro, não é? Mas a repetição nem sempre significa que é real. Você viu isso em fontes diferentes ou nos mesmos tipos de grupo?"
+    type: "buttons"
+    options:
+      - id: "different_sources"
+        title: "Fontes diferentes"
+        next_state: "closing"
+      - id: "same_groups"
+        title: "Mesmos tipos de grupo"
+        next_state: "closing"
+      - id: "not_sure"
+        title: "Não reparei"
+        next_state: "closing"
+
+  exploring_other:
+    message: "Entendo! Independente do motivo, é sempre bom refletir antes de compartilhar. Esse conteúdo menciona alguma fonte, autor ou organização que você pode verificar?"
+    type: "buttons"
+    options:
+      - id: "has_source"
+        title: "Sim, menciona"
+        next_state: "closing"
+      - id: "no_source"
+        title: "Não menciona"
+        next_state: "closing"
+      - id: "not_sure_source"
+        title: "Não sei dizer"
+        next_state: "closing"
+
+  # ── APROFUNDAMENTO ──────────────────────────────────────────────────────────
+  deepening_trust:
+    message: "Entendi. O que te faz confiar tanto nessa fonte? Ela costuma ser precisa? Já viu alguma correção ou desmentido dela antes?"
+    type: "buttons"
+    options:
+      - id: "always_right"
+        title: "Sempre é precisa"
+        next_state: "closing"
+      - id: "sometimes_wrong"
+        title: "Às vezes erra"
+        next_state: "closing"
+      - id: "never_checked"
+        title: "Nunca verifiquei"
+        next_state: "closing"
+
+  deepening_unknown_source:
+    message: "É um bom ponto para pensar. O quanto a veracidade importa para você na hora de compartilhar? Às vezes, verificar antes protege quem recebe a informação."
+    next_state: "closing"
+
+  deepening_fear:
+    message: "Quando sentimos medo, nosso cérebro quer agir rápido para proteger quem amamos. Isso é lindo, mas pode nos levar a compartilhar sem verificar. Esse conteúdo pede urgência?"
+    type: "buttons"
+    options:
+      - id: "yes_urgent"
+        title: "Sim, é urgente"
+        next_state: "closing"
+      - id: "no_not_urgent"
+        title: "Não é urgente"
+        next_state: "closing"
+      - id: "thinking"
+        title: "Estou pensando..."
+        next_state: "closing"
+
+  deepening_anger:
+    message: "A indignação é um motor poderoso de mudança. Mas às vezes conteúdos são criados para nos deixar com raiva e compartilhar sem pensar. Quem se beneficia se muitas pessoas ficarem com raiva dessa mensagem?"
+    type: "buttons"
+    options:
+      - id: "community"
+        title: "A comunidade"
+        next_state: "closing"
+      - id: "politicians"
+        title: "Políticos ou empresas"
+        next_state: "closing"
+      - id: "dont_know"
+        title: "Não sei"
+        next_state: "closing"
+
+  deepening_confirms:
+    message: "Isso se chama viés de confirmação — tendemos a acreditar mais no que já pensamos. É uma tendência natural, totalmente humana! Será que existe alguma informação diferente sobre esse assunto que você ainda não viu?"
+    type: "buttons"
+    options:
+      - id: "maybe"
+        title: "Talvez exista"
+        next_state: "closing"
+      - id: "no_its_true"
+        title: "Tenho certeza que é verdade"
+        next_state: "closing"
+      - id: "want_to_check"
+        title: "Quero verificar"
+        next_state: "closing"
+
+  deepening_forwarded:
+    message: "Mensagens encaminhadas muitas vezes são alteradas no caminho. O WhatsApp mostra uma setinha dupla quando algo foi muito encaminhado. Você viu isso nessa mensagem?"
+    type: "buttons"
+    options:
+      - id: "yes_forwarded_many"
+        title: "Sim, muito encaminhada"
+        next_state: "closing"
+      - id: "not_sure_forwarded"
+        title: "Não reparei"
+        next_state: "closing"
+      - id: "direct_from_someone"
+        title: "Recebi direto de alguém"
+        next_state: "closing"
+
+  # ── FECHAMENTO ──────────────────────────────────────────────────────────────
+  closing:
+    message: "Suas reflexões são muito valiosas! 💛 Agora, com base em tudo o que você pensou, você ainda quer compartilhar este conteúdo?"
+    type: "buttons"
+    options:
+      - id: "yes_share"
+        title: "Sim, quero compartilhar"
+        next_state: "feedback_share"
+      - id: "no_changed_mind"
+        title: "Não, mudei de ideia"
+        next_state: "feedback_not_share"
+      - id: "want_deeper"
+        title: "Quero investigar mais"
+        next_state: "feedback_investigate"
+
+  # ── FEEDBACK ────────────────────────────────────────────────────────────────
+  feedback_share:
+    message: "Tudo bem! O importante é que você pensou sobre isso antes. Se quiser, nosso espaço de investigação na web tem ferramentas para analisar fontes. Fica aqui o link: {web_platform_url}"
+    next_state: "end"
+
+  feedback_not_share:
+    message: "Sua capacidade de questionar e refletir é poderosa! 💪 Você acaba de proteger sua comunidade de uma possível informação incorreta. Continue usando essa habilidade!"
+    next_state: "end"
+
+  feedback_investigate:
+    message: "Que incrível! Sua vontade de investigar mostra maturidade e cuidado. Preparei um espaço especial para você, com ferramentas para analisar fontes e evidências:"
+    follow_up:
+      message: "👉 {web_platform_url}/analise/{content_id}\n\nO conteúdo que você enviou já está lá, pronto para ser investigado!"
+      type: "text"
+    next_state: "end"
+
+  # ── FIM ─────────────────────────────────────────────────────────────────────
+  end:
+    message: "Lembre-se: questionar não é desconfiar de tudo. É cuidar de si e de quem você ama. Sempre que receber algo que te faça duvidar, pode me enviar aqui. 🤗"
