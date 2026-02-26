@@ -18,7 +18,7 @@ interface Props {
   options: ChatOption[];
   loading: boolean;
   onOption: (id: string, title: string) => void;
-  contentId?: string; // definido quando state === "end"
+  contentId?: string;
 }
 
 export default function ChatInterface({
@@ -44,10 +44,10 @@ export default function ChatInterface({
 
         {/* Indicador de carregamento */}
         {loading && (
-          <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl rounded-tl-sm bg-secondary w-fit max-w-[85%]">
-            <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" />
+          <div className="flex items-center gap-1.5 px-4 py-3 rounded-xl rounded-tl-sm bg-hud-surface-2 w-fit max-w-[85%]">
+            <span className="w-2 h-2 rounded-sm bg-hud-accent animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-2 h-2 rounded-sm bg-hud-accent animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2 h-2 rounded-sm bg-hud-accent animate-bounce" />
           </div>
         )}
 
@@ -61,11 +61,12 @@ export default function ChatInterface({
             <button
               key={opt.id}
               onClick={() => onOption(opt.id, opt.title)}
-              className="w-full rounded-xl border border-input bg-background px-4 py-3
-                         text-sm text-left hover:bg-secondary transition-colors
-                         focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-border bg-hud-surface px-4 py-3
+                         text-sm font-mono text-left text-foreground
+                         hover:bg-hud-surface-2 hover:border-hud-accent/40
+                         transition-colors hud-focus"
             >
-              {opt.title}
+              ▸ {opt.title}
             </button>
           ))}
         </div>
@@ -73,12 +74,12 @@ export default function ChatInterface({
 
       {/* Card de conclusão */}
       {contentId && !loading && (
-        <div className="rounded-xl border border-green-200 bg-green-50/40 p-5 space-y-3">
+        <div className="hud-panel rounded-xl p-5 space-y-3 border-hud-success/40">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-green-800">
-              Conversa concluída
+            <p className="font-display text-2xl text-hud-success">
+              ANÁLISE CONCLUÍDA
             </p>
-            <p className="text-xs text-green-700">
+            <p className="text-xs font-mono text-hud-muted">
               Obrigado por pensar antes de compartilhar. A análise completa do
               conteúdo está pronta — com fact-checks, cobertura midiática e
               contexto da Wikipedia.
@@ -86,8 +87,9 @@ export default function ChatInterface({
           </div>
           <Link
             href={`/analise/${contentId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-green-700 px-4 py-2
-                       text-sm font-medium text-white hover:bg-green-800 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md bg-hud-accent
+                       px-4 py-2 text-sm font-mono font-bold uppercase tracking-widest
+                       text-background hover:opacity-90 transition-opacity"
           >
             Ver análise completa →
           </Link>
@@ -102,14 +104,12 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isBot ? "justify-start" : "justify-end"}`}>
       <div
-        className={`
-          max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
-          ${
-            isBot
-              ? "bg-secondary text-foreground rounded-tl-sm"
-              : "bg-primary text-primary-foreground rounded-tr-sm"
-          }
-        `}
+        className={[
+          "max-w-[85%] rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap",
+          isBot
+            ? "bg-hud-surface-2 text-foreground rounded-tl-sm"
+            : "bg-hud-accent text-background rounded-tr-sm font-mono",
+        ].join(" ")}
       >
         {message.body}
       </div>
