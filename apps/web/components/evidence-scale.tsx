@@ -150,8 +150,14 @@ function MultiDimensionalScale({
   const icon = VERDICT_ICON[riskScore.verdict] ?? "⚪";
   const { fc_verdict_breakdown: fc } = riskScore;
 
+  // Para veredito "verified_false" com múltiplos falsos, reforçar a borda/fundo
+  const isVerifiedFalse = riskScore.verdict === "verified_false";
+  const borderClass = isVerifiedFalse
+    ? "border-2 border-red-400 bg-red-50/60"
+    : `border ${cfg.border}`;
+
   return (
-    <section className={`rounded-xl border p-5 space-y-5 ${cfg.border}`}>
+    <section className={`rounded-xl p-5 space-y-5 ${borderClass}`}>
       {/* Cabeçalho + veredito */}
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
@@ -159,7 +165,13 @@ function MultiDimensionalScale({
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className={`text-lg font-semibold ${cfg.color}`}>{cfg.label}</h2>
-          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cfg.badge}`}>
+          <span
+            className={`text-sm font-bold px-3 py-0.5 rounded-full border ${
+              isVerifiedFalse
+                ? "bg-red-100 text-red-900 border-red-400"
+                : cfg.badge
+            }`}
+          >
             {icon} {riskScore.verdict_pt}
           </span>
         </div>

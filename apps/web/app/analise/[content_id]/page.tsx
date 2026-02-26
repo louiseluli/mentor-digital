@@ -1,7 +1,5 @@
 /**
  * /analise/[content_id] — Página de análise de conteúdo
- *
- * Micro-Batch 5.3: Balança da Evidência + fact-checks + cobertura GDELT.
  */
 
 import EvidenceScale from "@/components/evidence-scale";
@@ -9,6 +7,7 @@ import FactCheckSection from "@/components/factcheck-section";
 import GDELTSection from "@/components/gdelt-section";
 import WikipediaSection from "@/components/wikipedia-section";
 import { fetchAnalysis } from "@/lib/api";
+import type { FactCheckClaim } from "@/lib/api";
 import type { Metadata } from "next";
 
 interface Props {
@@ -20,6 +19,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `Análise ${content_id.slice(0, 8)}… — Mentor Digital`,
   };
+}
+
+/** Computa contagens simples dos vereditos FC para exibir aviso independente do risk_score. */
+function fcVerdictCounts(
+  allClaims: FactCheckClaim[]
+): { falseCount: number; mixedCount: number; total: number } {
+  let falseCount = 0;
+  let mixedCount = 0;
+  for (const claim of allClaims) {
+    const rv = claim.reviews?.[0]?.rating_value ?? 0;
+    if (rv >= 1 && rv <= 2) falseCount++;
+    else if (rv >= 3 && rv <= 4) mixedCount++;
+  }
+  return { falseCount, mixedCount, total: allClaims.length };
 }
 
 export default async function AnalisePage({ params }: Props) {
@@ -40,6 +53,14 @@ export default async function AnalisePage({ params }: Props) {
     );
   }
 
+  const allFcClaims = [
+    ...(data.fact_check.pt.results ?? []),
+    ...(data.fact_check.en.results ?? []),
+  ];
+  const { falseCount, mixedCount } = fcVerdictCounts(allFcClaims);
+  const hasVerifiedFalse = falseCount > 0;
+  const hasMixed = mixedCount > 0 && falseCount === 0;
+
   return (
     <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
       {/* Cabeçalho */}
@@ -59,6 +80,38 @@ export default async function AnalisePage({ params }: Props) {
           {data.nlp.word_count > 0 && <> · {data.nlp.word_count} palavras</>}
         </p>
       </header>
+
+      {/* ── Aviso proeminente baseado nos fact-checks ────────────────────────── */}
+      {hasVerifiedFalse && (
+        <div
+          role="alert"
+          className="rounded-xl border-2 border-red-400 bg-red-50 px-5 py-4 space-y-1"
+        >
+          <p className="font-bold text-red-800 text-base">
+            ⚠️ Cuidado: alegações similares foram verificadas como falsas
+          </p>
+          <p className="text-sm text-red-700">
+            {falseCount} fact-check{falseCount > 1 ? "s" : ""} de agências
+            verificadoras{mixedCount > 0 ? ` e ${mixedCount} com avaliação mista` : ""}{" "}
+            foram encontrados para este conteúdo. Verifique a fonte antes de
+            compartilhar.
+          </p>
+        </div>
+      )}
+      {hasMixed && !hasVerifiedFalse && (
+        <div
+          role="alert"
+          className="rounded-xl border-2 border-amber-400 bg-amber-50 px-5 py-4 space-y-1"
+        >
+          <p className="font-bold text-amber-800 text-base">
+            ⚠️ Atenção: informações contestadas ou parcialmente incorretas
+          </p>
+          <p className="text-sm text-amber-700">
+            {mixedCount} fact-check{mixedCount > 1 ? "s" : ""} classificaram
+            alegações similares como enganosas ou com contexto incompleto.
+          </p>
+        </div>
+      )}
 
       {/* Balança da Evidência */}
       {!data.nlp.error && (

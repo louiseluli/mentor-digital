@@ -43,13 +43,19 @@ def _rating_to_risk(rating_value: int) -> float:
     if rating_value <= 2:
         return 1.0   # Falso
     if rating_value <= 4:
-        return 0.5   # Misto / Enganoso
+        return 0.65  # Misto / Enganoso (era 0.5 — revisado para refletir gravidade)
     return 0.1       # Verdadeiro
 
 
 def _factcheck_signal(fc_results: list) -> tuple[float, str, dict]:
     """
     Calcula sinal de risco a partir dos vereditos encontrados.
+
+    Aplica floors progressivos quando vereditos falsos dominam:
+      ≥1 Falso             → signal ≥ 0.75
+      ≥2 Falsos            → signal ≥ 0.85
+      Falsos ≥ Mistos      → signal ≥ 0.90
+      ≥3 Falsos            → signal ≥ 0.92
 
     Returns:
         (signal: float, verdict_key: str, breakdown: dict)
@@ -67,15 +73,28 @@ def _factcheck_signal(fc_results: list) -> tuple[float, str, dict]:
             rv = review.get("rating_value", 0)
             risk = _rating_to_risk(rv)
             risk_sum += risk
-            if rv <= 2 and rv > 0:
+            if 0 < rv <= 2:
                 false_count += 1
-            elif rv <= 4 and rv > 0:
+            elif 0 < rv <= 4:
                 mixed_count += 1
             elif rv > 4:
                 true_count += 1
 
     review_count = false_count + mixed_count + true_count
-    signal = risk_sum / max(review_count, 1)
+    if review_count == 0:
+        return 0.5, "no_data", {"total": len(fc_results), "false": 0, "mixed": 0, "true": 0}
+
+    signal = risk_sum / review_count
+
+    # Floors progressivos quando "Falso" aparece — agências dizem que é mentira
+    if false_count >= 1:
+        signal = max(signal, 0.75)
+    if false_count >= 2:
+        signal = max(signal, 0.85)
+    if false_count >= 1 and false_count >= mixed_count:
+        signal = max(signal, 0.90)
+    if false_count >= 3:
+        signal = max(signal, 0.92)
 
     # Veredito dominante
     if false_count > 0:
@@ -84,10 +103,8 @@ def _factcheck_signal(fc_results: list) -> tuple[float, str, dict]:
         verdict = "mixed"
     elif true_count > 0 and false_count == 0 and mixed_count == 0:
         verdict = "verified_true"
-    elif review_count > 0:
-        verdict = "no_clear_verdict"
     else:
-        verdict = "no_data"
+        verdict = "no_clear_verdict"
 
     breakdown = {
         "total": len(fc_results),
@@ -172,7 +189,12 @@ def compute_risk_score(analysis: dict) -> dict:
     has_fc = bool(all_fc_results)
 
     if has_fc:
-        overall = linguistic * 0.30 + fc_signal * 0.60 + (1 - coverage) * 0.10
+        overall = linguistic * 0.25 + fc_signal * 0.65 + (1 - coverage) * 0.10
+        # Floor: se agências confirmaram como falso, nunca classificar abaixo de "high"
+        if verdict == "verified_false":
+            overall = max(overall, 0.65)
+        elif verdict == "mixed":
+            overall = max(overall, 0.40)
     else:
         # Sem FC: sinal linguístico tem peso maior; cobertura reduz incerteza
         overall = linguistic * 0.70 + (1 - coverage * 0.30) * 0.30
@@ -188,6 +210,11 @@ def compute_risk_score(analysis: dict) -> dict:
         level = "high"
     else:
         level = "critical"
+
+    # Override: verified_false com múltiplos vereditos → no mínimo "high"
+    if verdict == "verified_false" and breakdown.get("false", 0) >= 2:
+        if level in ("low", "moderate"):
+            level = "high"
 
     result = {
         "overall": round(overall, 3),
