@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-vt323);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -45,28 +46,59 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* ── Retro Gaming Design Tokens ─────────────────────────────────────────── */
+  --color-hud-success: var(--hud-success);
+  --color-hud-warning: var(--hud-warning);
+  --color-hud-danger: var(--hud-danger);
+  --color-hud-info: var(--hud-info);
+  --color-hud-accent: var(--hud-accent);
+  --color-hud-accent-2: var(--hud-accent-2);
+  --color-hud-surface: var(--hud-surface);
+  --color-hud-surface-2: var(--hud-surface-2);
+  --color-hud-muted: var(--hud-muted);
 }
 
-:root {
+/* ── Light theme (default / data-theme="light") ────────────────────────────── */
+:root,
+[data-theme="light"] {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.98 0.004 85);          /* warm off-white */
+  --foreground: oklch(0.12 0.01 260);          /* deep navy */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.12 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.12 0.01 260);
+  --primary: oklch(0.18 0.01 260);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --secondary: oklch(0.94 0.005 80);
+  --secondary-foreground: oklch(0.18 0.01 260);
+  --muted: oklch(0.94 0.005 80);
+  --muted-foreground: oklch(0.45 0.01 260);
+  --accent: oklch(0.94 0.005 80);
+  --accent-foreground: oklch(0.18 0.01 260);
+  --destructive: oklch(0.55 0.24 25);
+  --border: oklch(0.86 0.008 80);
+  --input: oklch(0.86 0.008 80);
+  --ring: oklch(0.55 0.14 145);
+
+  /* HUD-specific tokens — light mode */
+  --hud-accent: oklch(0.40 0.16 145);          /* forest green */
+  --hud-accent-2: oklch(0.55 0.14 70);         /* dark amber */
+  --hud-success: oklch(0.40 0.16 145);
+  --hud-warning: oklch(0.55 0.14 70);
+  --hud-danger: oklch(0.50 0.22 25);
+  --hud-info: oklch(0.42 0.14 250);
+  --hud-surface: oklch(0.99 0.002 80);
+  --hud-surface-2: oklch(0.94 0.005 80);
+  --hud-muted: oklch(0.45 0.01 260);
+
+  --hud-shadow: 0 2px 0 oklch(0 0 0 / 0.12), 0 1px 8px oklch(0 0 0 / 0.06);
+  --hud-glow: 0 0 0 3px oklch(0.40 0.16 145 / 0.20);
+  --hud-scanline-opacity: 0;
+  --hud-panel-border: 2px solid oklch(0.72 0.02 80);
+  --hud-panel-inner: inset 0 0 0 2px oklch(0.94 0.005 80);
+
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -82,25 +114,45 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+/* ── Dark theme (.dark / data-theme="dark") ─────────────────────────────────── */
+.dark,
+[data-theme="dark"] {
+  --background: oklch(0.09 0.015 260);         /* near-black navy */
+  --foreground: oklch(0.92 0.008 100);         /* warm off-white */
+  --card: oklch(0.13 0.015 260);
+  --card-foreground: oklch(0.92 0.008 100);
+  --popover: oklch(0.13 0.015 260);
+  --popover-foreground: oklch(0.92 0.008 100);
+  --primary: oklch(0.88 0.008 100);
+  --primary-foreground: oklch(0.12 0.015 260);
+  --secondary: oklch(0.19 0.015 260);
+  --secondary-foreground: oklch(0.92 0.008 100);
+  --muted: oklch(0.19 0.015 260);
+  --muted-foreground: oklch(0.58 0.02 260);
+  --accent: oklch(0.19 0.015 260);
+  --accent-foreground: oklch(0.92 0.008 100);
+  --destructive: oklch(0.68 0.22 22);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.65 0.20 145);
+
+  /* HUD-specific tokens — dark mode */
+  --hud-accent: oklch(0.78 0.22 145);          /* phosphor green */
+  --hud-accent-2: oklch(0.85 0.18 80);         /* arcade yellow */
+  --hud-success: oklch(0.72 0.20 145);
+  --hud-warning: oklch(0.82 0.17 80);
+  --hud-danger: oklch(0.68 0.22 22);
+  --hud-info: oklch(0.68 0.16 250);
+  --hud-surface: oklch(0.13 0.015 260);
+  --hud-surface-2: oklch(0.17 0.015 260);
+  --hud-muted: oklch(0.58 0.02 260);
+
+  --hud-shadow: 0 2px 0 oklch(0 0 0 / 0.6), 0 4px 20px oklch(0 0 0 / 0.35);
+  --hud-glow: 0 0 12px oklch(0.78 0.22 145 / 0.25), 0 0 0 1px oklch(0.78 0.22 145 / 0.15);
+  --hud-scanline-opacity: 0.035;
+  --hud-panel-border: 2px solid oklch(0.35 0.04 260);
+  --hud-panel-inner: inset 0 0 0 2px oklch(0.17 0.015 260);
+
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -123,4 +175,53 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── CRT Scanlines (dark mode only, very subtle) ─────────────────────────────── */
+.dark body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 3px,
+    oklch(0 0 0 / var(--hud-scanline-opacity)) 3px,
+    oklch(0 0 0 / var(--hud-scanline-opacity)) 4px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Disable scanlines for users who prefer reduced motion/effects */
+@media (prefers-reduced-motion: reduce) {
+  .dark body::after {
+    display: none;
+  }
+}
+
+/* ── HUD utility classes ───────────────────────────────────────────────────── */
+.hud-panel {
+  border: var(--hud-panel-border);
+  box-shadow: var(--hud-panel-inner), var(--hud-shadow);
+  background: var(--hud-surface);
+}
+
+.hud-panel-inset {
+  box-shadow: var(--hud-panel-inner);
+}
+
+/* Focus ring — retro glow style */
+.hud-focus:focus-visible {
+  outline: none;
+  box-shadow: var(--hud-glow);
+}
+
+/* Retro divider: dashed pixel line */
+.hud-divider {
+  border: none;
+  border-top: 2px dashed oklch(0.72 0.02 80 / 0.5);
+}
+.dark .hud-divider {
+  border-top-color: oklch(0.35 0.04 260 / 0.6);
 }

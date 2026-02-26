@@ -1,7 +1,12 @@
 /**
- * /analise/[content_id] — Página de análise de conteúdo
+ * /analise/[content_id] — Página de análise (retro HUD layout)
+ *
+ * Desktop: 2 colunas
+ *   Esquerda: Header HUD + aviso + Stats Panel + GDELT + Wikipedia + rodapé
+ *   Direita:  Quest Log (verificações FC)
  */
 
+import AnalysisHeader from "@/components/analysis-header";
 import EvidenceScale from "@/components/evidence-scale";
 import FactCheckSection from "@/components/factcheck-section";
 import GDELTSection from "@/components/gdelt-section";
@@ -21,10 +26,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** Computa contagens simples dos vereditos FC para exibir aviso independente do risk_score. */
+/** Computa contagens simples dos vereditos FC para o aviso independente do risk_score. */
 function fcVerdictCounts(
   allClaims: FactCheckClaim[]
-): { falseCount: number; mixedCount: number; total: number } {
+): { falseCount: number; mixedCount: number } {
   let falseCount = 0;
   let mixedCount = 0;
   for (const claim of allClaims) {
@@ -32,7 +37,7 @@ function fcVerdictCounts(
     if (rv >= 1 && rv <= 2) falseCount++;
     else if (rv >= 3 && rv <= 4) mixedCount++;
   }
-  return { falseCount, mixedCount, total: allClaims.length };
+  return { falseCount, mixedCount };
 }
 
 export default async function AnalisePage({ params }: Props) {
@@ -43,6 +48,7 @@ export default async function AnalisePage({ params }: Props) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-8 text-center">
         <div className="max-w-md space-y-3">
+          <p className="font-display text-4xl text-foreground">404</p>
           <h1 className="text-xl font-semibold">Análise não encontrada</h1>
           <p className="text-muted-foreground text-sm">
             Esta análise pode ter expirado (disponível por 7 dias) ou o link
@@ -59,111 +65,108 @@ export default async function AnalisePage({ params }: Props) {
   ];
   const { falseCount, mixedCount } = fcVerdictCounts(allFcClaims);
   const hasVerifiedFalse = falseCount > 0;
-  const hasMixed = mixedCount > 0 && falseCount === 0;
+  const hasMixed = mixedCount > 0 && !hasVerifiedFalse;
 
   return (
-    <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
-      {/* Cabeçalho */}
-      <header className="space-y-1">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">
-          Mentor Digital · Análise de Conteúdo
-        </p>
-        <h1 className="text-xl font-semibold leading-snug line-clamp-3">
-          {data.query || "Conteúdo de mídia"}
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          Analisado em{" "}
-          {new Date(data.analyzed_at).toLocaleString("pt-BR", {
-            dateStyle: "short",
-            timeStyle: "short",
-          })}
-          {data.nlp.word_count > 0 && <> · {data.nlp.word_count} palavras</>}
-        </p>
-      </header>
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      {/* ── Full-width header ──────────────────────────────────────────────── */}
+      <AnalysisHeader
+        query={data.query}
+        analyzedAt={data.analyzed_at}
+        wordCount={data.nlp.word_count}
+        riskScore={data.risk_score}
+      />
 
-      {/* ── Aviso proeminente baseado nos fact-checks ────────────────────────── */}
+      {/* ── Warning banner (works without risk_score — raw FC counts) ─────── */}
       {hasVerifiedFalse && (
         <div
           role="alert"
-          className="rounded-xl border-2 border-red-400 bg-red-50 px-5 py-4 space-y-1"
+          className="rounded-xl border-2 border-hud-danger bg-hud-danger/10 px-5 py-4 space-y-1"
         >
-          <p className="font-bold text-red-800 text-base">
-            ⚠️ Cuidado: alegações similares foram verificadas como falsas
+          <p className="font-mono font-bold text-hud-danger text-sm uppercase tracking-wide">
+            ⚠ Cuidado: alegações similares foram verificadas como falsas
           </p>
-          <p className="text-sm text-red-700">
+          <p className="text-sm text-hud-danger/80">
             {falseCount} fact-check{falseCount > 1 ? "s" : ""} de agências
-            verificadoras{mixedCount > 0 ? ` e ${mixedCount} com avaliação mista` : ""}{" "}
-            foram encontrados para este conteúdo. Verifique a fonte antes de
-            compartilhar.
+            verificadoras
+            {mixedCount > 0
+              ? ` e ${mixedCount} com avaliação mista`
+              : ""}{" "}
+            foram encontrados. Verifique a fonte antes de compartilhar.
           </p>
         </div>
       )}
-      {hasMixed && !hasVerifiedFalse && (
+      {hasMixed && (
         <div
           role="alert"
-          className="rounded-xl border-2 border-amber-400 bg-amber-50 px-5 py-4 space-y-1"
+          className="rounded-xl border-2 border-hud-warning bg-hud-warning/10 px-5 py-4 space-y-1"
         >
-          <p className="font-bold text-amber-800 text-base">
-            ⚠️ Atenção: informações contestadas ou parcialmente incorretas
+          <p className="font-mono font-bold text-hud-warning text-sm uppercase tracking-wide">
+            ⚠ Atenção: informações contestadas ou parcialmente incorretas
           </p>
-          <p className="text-sm text-amber-700">
+          <p className="text-sm text-hud-warning/80">
             {mixedCount} fact-check{mixedCount > 1 ? "s" : ""} classificaram
             alegações similares como enganosas ou com contexto incompleto.
           </p>
         </div>
       )}
 
-      {/* Balança da Evidência */}
-      {!data.nlp.error && (
-        <EvidenceScale
-          urgency={data.nlp.urgency}
-          claim={data.nlp.claim}
-          manipulation={data.nlp.manipulation}
-          riskScore={data.risk_score}
-        />
-      )}
+      {/* ── 2-column grid ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-6 items-start">
+        {/* LEFT — Summary HUD */}
+        <div className="space-y-6">
+          {!data.nlp.error && (
+            <EvidenceScale
+              urgency={data.nlp.urgency}
+              claim={data.nlp.claim}
+              manipulation={data.nlp.manipulation}
+              riskScore={data.risk_score}
+            />
+          )}
 
-      {/* Verificações de fatos */}
-      <FactCheckSection
-        pt={data.fact_check.pt}
-        en={data.fact_check.en}
-        brazilianFc={data.brazilian_fc}
-      />
+          <GDELTSection por={data.gdelt.por} en={data.gdelt.en} />
 
-      {/* Cobertura midiática */}
-      <GDELTSection por={data.gdelt.por} en={data.gdelt.en} />
+          {data.wikipedia && (
+            <WikipediaSection pt={data.wikipedia.pt} en={data.wikipedia.en} />
+          )}
 
-      {/* Contexto da Wikipedia */}
-      {data.wikipedia && (
-        <WikipediaSection pt={data.wikipedia.pt} en={data.wikipedia.en} />
-      )}
+          {/* Rodapé pedagógico */}
+          <footer className="text-[11px] font-mono text-hud-muted space-y-1 border-t border-border pt-4">
+            <p>
+              O Mentor Digital apoia o pensamento crítico — não substitui a
+              verificação humana. Consulte{" "}
+              <a
+                href="https://www.aosfatos.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Aos Fatos
+              </a>
+              {" e "}
+              <a
+                href="https://www.agenciapublica.org.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Agência Pública
+              </a>
+              .
+            </p>
+            <p>Resultados disponíveis por 7 dias.</p>
+          </footer>
+        </div>
 
-      {/* Rodapé pedagógico */}
-      <footer className="border-t pt-6 text-xs text-muted-foreground space-y-1">
-        <p>
-          O Mentor Digital apoia o pensamento crítico — não substitui a
-          verificação humana. Consulte veículos de fact-checking como{" "}
-          <a
-            href="https://www.aosfatos.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            Aos Fatos
-          </a>
-          {" e "}
-          <a
-            href="https://www.agenciapublica.org.br"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            Agência Pública
-          </a>
-          .
-        </p>
-        <p>Resultados disponíveis por 7 dias.</p>
-      </footer>
+        {/* RIGHT — Quest Log */}
+        <div className="lg:sticky lg:top-20">
+          <FactCheckSection
+            pt={data.fact_check.pt}
+            en={data.fact_check.en}
+            brazilianFc={data.brazilian_fc}
+          />
+        </div>
+      </div>
     </main>
   );
 }
