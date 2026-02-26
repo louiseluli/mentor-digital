@@ -58,11 +58,39 @@ function worstVerdict(reviews: ClaimReview[]): {
   let hasMixed = false;
   let hasTrue = false;
 
+  const MIXED_TERMS = [
+    "enganoso", "misleading", "missing context", "sem contexto",
+    "misto", "mixed", "parcial", "distorcido", "out of context",
+    "fora de contexto",
+  ];
+  const FALSE_TERMS = [
+    "falso", "false", "incorrect", "incorreto", "errado", "fake",
+    "mentira", "inverídico",
+  ];
+  const TRUE_TERMS = [
+    "verdadeiro", "true", "correto", "correct", "procedente",
+    "confirmado", "verified", "verídico",
+  ];
+
   for (const r of reviews) {
     const v = r.rating_value;
-    if (v >= 1 && v <= 2) hasFalse = true;
-    else if (v >= 3 && v <= 4) hasMixed = true;
-    else if (v >= 5) hasTrue = true;
+    if (v >= 1 && v <= 2) {
+      hasFalse = true;
+    } else if (v >= 3 && v <= 4) {
+      hasMixed = true;
+    } else if (v >= 5) {
+      hasTrue = true;
+    } else {
+      // Fallback: parse text_rating when rating_value is 0/unknown
+      const t = (r.text_rating ?? "").toLowerCase();
+      if (MIXED_TERMS.some((term) => t.includes(term))) {
+        hasMixed = true;
+      } else if (FALSE_TERMS.some((term) => t.includes(term))) {
+        hasFalse = true;
+      } else if (TRUE_TERMS.some((term) => t.includes(term))) {
+        hasTrue = true;
+      }
+    }
   }
 
   if (hasFalse)

@@ -43,8 +43,44 @@ def _rating_to_risk(rating_value: int) -> float:
     if rating_value <= 2:
         return 1.0   # Falso
     if rating_value <= 4:
-        return 0.65  # Misto / Enganoso (era 0.5 — revisado para refletir gravidade)
+        return 0.65  # Misto / Enganoso
     return 0.1       # Verdadeiro
+
+
+# Termos verificados via text_rating (quando rating_value=0)
+_MIXED_TERMS = {
+    "enganoso", "misleading", "missing context", "sem contexto",
+    "distorcido", "exagerado", "parcialmente", "misto", "mixed",
+    "out of context", "fora de contexto", "descontextualizado", "parcial",
+}
+_FALSE_TERMS = {
+    "falso", "false", "incorrect", "incorreto", "errado", "wrong",
+    "mentira", "fake", "inverídico", "infundado",
+}
+_TRUE_TERMS = {
+    "verdadeiro", "true", "correto", "correct", "verdade",
+    "procedente", "confirmado", "verified", "verídico",
+}
+
+
+def _text_to_category(text_rating: str) -> str | None:
+    """Mapeia text_rating → 'false'|'mixed'|'true'|None quando rating_value=0.
+
+    Verifica misto ANTES de falso porque 'enganoso' não é 'falso'.
+    """
+    t = text_rating.lower().strip()
+    if not t:
+        return None
+    for term in _MIXED_TERMS:
+        if term in t:
+            return "mixed"
+    for term in _FALSE_TERMS:
+        if term in t:
+            return "false"
+    for term in _TRUE_TERMS:
+        if term in t:
+            return "true"
+    return None
 
 
 def _factcheck_signal(fc_results: list) -> tuple[float, str, dict]:
@@ -71,18 +107,33 @@ def _factcheck_signal(fc_results: list) -> tuple[float, str, dict]:
     for claim in fc_results:
         for review in claim.get("reviews", []):
             rv = review.get("rating_value", 0)
-            risk = _rating_to_risk(rv)
-            risk_sum += risk
-            if 0 < rv <= 2:
-                false_count += 1
-            elif 0 < rv <= 4:
-                mixed_count += 1
-            elif rv > 4:
-                true_count += 1
+            if rv > 0:
+                # Caminho normal: rating numérico disponível
+                risk_sum += _rating_to_risk(rv)
+                if rv <= 2:
+                    false_count += 1
+                elif rv <= 4:
+                    mixed_count += 1
+                else:
+                    true_count += 1
+            else:
+                # Fallback: interpretar text_rating quando rating_value=0
+                category = _text_to_category(review.get("text_rating", ""))
+                if category == "false":
+                    risk_sum += 1.0
+                    false_count += 1
+                elif category == "mixed":
+                    risk_sum += 0.65
+                    mixed_count += 1
+                elif category == "true":
+                    risk_sum += 0.1
+                    true_count += 1
+                # Sem categoria reconhecível → não conta no sinal
 
     review_count = false_count + mixed_count + true_count
     if review_count == 0:
-        return 0.5, "no_data", {"total": len(fc_results), "false": 0, "mixed": 0, "true": 0}
+        # FC encontrados mas nenhum com veredito legível → inconclusivo
+        return 0.5, "no_clear_verdict", {"total": len(fc_results), "false": 0, "mixed": 0, "true": 0}
 
     signal = risk_sum / review_count
 

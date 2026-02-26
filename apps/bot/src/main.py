@@ -29,6 +29,8 @@ from src.session_manager import SessionManager
 
 load_dotenv()
 
+_WEB_PLATFORM_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+
 
 # ── Logging estruturado (JSON) ─────────────────────────────────────────────────
 
@@ -150,6 +152,17 @@ def _load_web_chat(session_id: str) -> "dict | None":
     fsm.state = data["state"]
     fsm.nlp_data = data.get("nlp_data")
     return {"fsm": fsm, "analysis_ready": data["analysis_ready"]}
+
+
+def _substitute_web_vars(messages: list, content_id: str) -> list:
+    """Substitui {web_platform_url} e {content_id} nos corpos das mensagens FSM."""
+    result = []
+    for msg in messages:
+        body = msg.get("body", "")
+        body = body.replace("{web_platform_url}", _WEB_PLATFORM_URL)
+        body = body.replace("{content_id}", content_id)
+        result.append({**msg, "body": body})
+    return result
 
 
 def _collect_web_messages(fsm, initial_response: dict) -> list:
@@ -340,7 +353,7 @@ async def chat_start(request: Request):
         "session_id": session_id,
         "content_id": ctx.content_id,
         "state": fsm.state,
-        "messages": messages,
+        "messages": _substitute_web_vars(messages, session_id),
     }
 
 
@@ -377,12 +390,13 @@ async def chat_reply(request: Request, session_id: str):
 
     _save_web_chat(session_id, fsm, analysis_ready=analysis_ready)
 
+    content_id = fsm.context.content_id
     return {
         "session_id": session_id,
         "state": fsm.state,
-        "messages": messages,
+        "messages": _substitute_web_vars(messages, content_id),
         "analysis_ready": analysis_ready,
-        "content_id": fsm.context.content_id,
+        "content_id": content_id,
     }
 
 
