@@ -7,6 +7,7 @@
 import EvidenceScale from "@/components/evidence-scale";
 import FactCheckSection from "@/components/factcheck-section";
 import GDELTSection from "@/components/gdelt-section";
+import WikipediaSection from "@/components/wikipedia-section";
 import { fetchAnalysis } from "@/lib/api";
 import type { Metadata } from "next";
 
@@ -73,6 +74,11 @@ export default async function AnalisePage({ params }: Props) {
 
       {/* Cobertura midiática */}
       <GDELTSection por={data.gdelt.por} en={data.gdelt.en} />
+
+      {/* Contexto da Wikipedia */}
+      {data.wikipedia && (
+        <WikipediaSection pt={data.wikipedia.pt} en={data.wikipedia.en} />
+      )}
 
       {/* Rodapé pedagógico */}
       <footer className="border-t pt-6 text-xs text-muted-foreground space-y-1">

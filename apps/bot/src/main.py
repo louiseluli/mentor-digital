@@ -122,6 +122,109 @@ app.add_middleware(
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
+# ── Web Chat helpers ───────────────────────────────────────────────────────────
+
+_WEB_CHAT_PREFIX = "mentor:webchat:"
+_WEB_CHAT_TTL = 3600  # 1 hora
+
+
+def _save_web_chat(session_id: str, fsm, analysis_ready: bool) -> None:
+    data = json.dumps({
+        "context": fsm.context.to_json(),
+        "state": fsm.state,
+        "nlp_data": fsm.nlp_data,
+        "analysis_ready": analysis_ready,
+    })
+    _get_session_mgr().redis.set(f"{_WEB_CHAT_PREFIX}{session_id}", data, ex=_WEB_CHAT_TTL)
+
+
+def _load_web_chat(session_id: str) -> "dict | None":
+    raw = _get_session_mgr().redis.get(f"{_WEB_CHAT_PREFIX}{session_id}")
+    if not raw:
+        return None
+    from src.models import ConversationContext
+    from src.engine.fsm import QuestioningFSM
+    data = json.loads(raw)
+    ctx = ConversationContext.from_json(data["context"])
+    fsm = QuestioningFSM(ctx)
+    fsm.state = data["state"]
+    fsm.nlp_data = data.get("nlp_data")
+    return {"fsm": fsm, "analysis_ready": data["analysis_ready"]}
+
+
+def _collect_web_messages(fsm, initial_response: dict) -> list:
+    """Auto-avança estados sem opções (mesmo padrão do telegram.py)."""
+    all_msgs = list(initial_response.get("messages", []))
+    while True:
+        state_data = fsm._flow.get(fsm.state, {})
+        has_options = (
+            state_data.get("options")
+            or state_data.get("follow_up", {}).get("options", [])
+        )
+        if not has_options and "next_state" in state_data:
+            next_resp = fsm._handle_yaml_state("")
+            all_msgs.extend(next_resp.get("messages", []))
+        else:
+            break
+    return all_msgs
+
+
+def _format_findings_for_chat(results: dict) -> str:
+    """Formata achados de análise para injetar na mensagem de fechamento da conversa web."""
+    fc = results.get("fact_check", {})
+    claims = fc.get("pt", {}).get("results", []) + fc.get("en", {}).get("results", [])
+    gdelt = results.get("gdelt", {})
+    total_articles = (
+        len(gdelt.get("por", {}).get("articles", []))
+        + len(gdelt.get("en", {}).get("articles", []))
+    )
+    wiki = results.get("wikipedia", {})
+    wiki_results = wiki.get("pt", {}).get("results", []) + wiki.get("en", {}).get("results", [])
+
+    lines = ["🔍 Enquanto conversávamos, analisamos o conteúdo:"]
+
+    if claims:
+        lines.append(f"\n✅ {len(claims)} verificação(ões) de fatos encontrada(s):")
+        for claim in claims[:2]:
+            reviews = claim.get("reviews", [])
+            if reviews:
+                r = reviews[0]
+                text = claim.get("text", "")[:80]
+                lines.append(f'  • "{text}…"\n    {r.get("publisher_name", "")}: {r.get("text_rating", "")}')
+    else:
+        lines.append("  Não encontramos fact-checks específicos para este conteúdo.")
+
+    if total_articles:
+        lines.append(f"\n📰 {total_articles} artigo(s) na mídia sobre o tema.")
+
+    if wiki_results:
+        w = wiki_results[0]
+        extract = w.get("extract", "")[:120]
+        lines.append(f"\n📚 Wikipedia — {w.get('title', '')}: {extract}…")
+
+    return "\n".join(lines)
+
+
+async def _analyze_web_session(ctx, session_id: str) -> None:
+    """Roda análise completa em background e marca sessão web como pronta."""
+    try:
+        from src.analysis.analysis_service import analyze_content
+        results = await analyze_content(ctx)
+        _get_session_mgr().save_analysis(ctx.content_id, results)
+        raw = _get_session_mgr().redis.get(f"{_WEB_CHAT_PREFIX}{session_id}")
+        if raw:
+            data = json.loads(raw)
+            data["analysis_ready"] = True
+            _get_session_mgr().redis.set(
+                f"{_WEB_CHAT_PREFIX}{session_id}", json.dumps(data), ex=_WEB_CHAT_TTL
+            )
+        logger.info("Web session analysis ready | session=%s | content=%s", session_id, ctx.content_id)
+    except Exception as exc:
+        logger.error("Web session analysis failed | session=%s | error=%s", session_id, exc)
+
+
+# ── Endpoints ──────────────────────────────────────────────────────────────────
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "mentor-digital-bot"}
@@ -168,6 +271,105 @@ async def submit_analysis(request: Request):
     results = await analyze_content(ctx)
     _get_session_mgr().save_analysis(ctx.content_id, results)
     return {"content_id": ctx.content_id}
+
+
+@app.post("/chat/start")
+@limiter.limit("5/minute")
+async def chat_start(request: Request):
+    """Inicia conversa educativa via web — NLP imediato + análise completa em background.
+
+    Retorna primeiras mensagens FSM (sinais NLP + saudação) e session_id para continuação.
+    Rate limit: 5 req/min por IP.
+    """
+    from src.models import ConversationContext
+    from src.engine.fsm import QuestioningFSM
+    from src.analysis.nlp import analyze_text, serialize_nlp_result
+    from src.content_detector import detect_text_type
+
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if len(text) < 10:
+        raise HTTPException(status_code=422, detail="Texto muito curto (mínimo 10 caracteres)")
+    if len(text) > 5000:
+        raise HTTPException(status_code=422, detail="Texto muito longo (máximo 5000 caracteres)")
+
+    ctx = ConversationContext(user_id="web", platform="web", content_raw=text)
+    fsm = QuestioningFSM(ctx)
+
+    # NLP síncrono (<5ms) — alimenta mensagem educativa de boas-vindas
+    nlp_result = analyze_text(text)
+    fsm.nlp_data = serialize_nlp_result(nlp_result)
+
+    content_type = detect_text_type(text)
+    response = fsm.process_input(text, content_type)
+    messages = _collect_web_messages(fsm, response)
+
+    session_id = ctx.content_id  # UUID compartilhado entre sessão e análise
+    _save_web_chat(session_id, fsm, analysis_ready=False)
+
+    # Análise completa (FC + GDELT + Wikipedia + NLP) em background
+    asyncio.create_task(_analyze_web_session(ctx, session_id))
+
+    return {
+        "session_id": session_id,
+        "content_id": ctx.content_id,
+        "state": fsm.state,
+        "messages": messages,
+    }
+
+
+@app.post("/chat/reply/{session_id}")
+@limiter.limit("30/minute")
+async def chat_reply(request: Request, session_id: str):
+    """Processa resposta do usuário e avança o FSM da conversa web.
+
+    Ao atingir o estado 'closing' com análise já concluída, injeta um resumo
+    dos achados (fact-checks, artigos, Wikipedia) antes das mensagens do FSM.
+    Rate limit: 30 req/min por IP.
+    """
+    from src.engine.fsm import QuestioningFSM
+
+    body = await request.json()
+    option_id = (body.get("option_id") or "").strip()
+
+    session_data = _load_web_chat(session_id)
+    if not session_data:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada ou expirada")
+
+    fsm = session_data["fsm"]
+    analysis_ready = session_data["analysis_ready"]
+
+    response = fsm.process_input(option_id)
+    messages = _collect_web_messages(fsm, response)
+
+    # Ao fechar a conversa, injeta achados da análise se já estiverem disponíveis
+    if fsm.state == "closing" and analysis_ready:
+        results = _get_session_mgr().get_analysis(fsm.context.content_id)
+        if results:
+            findings = _format_findings_for_chat(results)
+            messages.insert(0, {"type": "text", "body": findings})
+
+    _save_web_chat(session_id, fsm, analysis_ready=analysis_ready)
+
+    return {
+        "session_id": session_id,
+        "state": fsm.state,
+        "messages": messages,
+        "analysis_ready": analysis_ready,
+        "content_id": fsm.context.content_id,
+    }
+
+
+@app.get("/chat/{session_id}/status")
+async def chat_status(session_id: str):
+    """Verifica se a análise background foi concluída — usado para polling pelo frontend."""
+    session_data = _load_web_chat(session_id)
+    if not session_data:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada ou expirada")
+    return {
+        "ready": session_data["analysis_ready"],
+        "content_id": session_data["fsm"].context.content_id,
+    }
 
 
 @app.get("/analytics/summary")

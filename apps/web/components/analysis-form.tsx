@@ -12,7 +12,7 @@ export default function AnalysisForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (text.trim().length < 10) {
       setError("Cole um texto com pelo menos 10 caracteres.");
@@ -21,18 +21,23 @@ export default function AnalysisForm() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/analyze`, {
+      const res = await fetch(`${BASE_URL}/chat/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: text.trim() }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.detail ?? "Erro ao analisar. Tente novamente.");
+        setError(data.detail ?? "Erro ao iniciar análise. Tente novamente.");
         return;
       }
-      const { content_id } = await res.json();
-      router.push(`/analise/${content_id}`);
+      const { session_id, messages, state, content_id } = await res.json();
+      // Salva estado inicial do chat para a página de conversa carregar sem fetch extra
+      sessionStorage.setItem(
+        `chat_${session_id}`,
+        JSON.stringify({ messages, state, content_id })
+      );
+      router.push(`/conversa/${session_id}`);
     } catch {
       setError("Não foi possível conectar ao servidor. Tente novamente.");
     } finally {
@@ -62,7 +67,7 @@ export default function AnalysisForm() {
                    text-primary-foreground hover:bg-primary/90 disabled:opacity-50
                    transition-colors"
       >
-        {loading ? "Analisando…" : "Analisar conteúdo"}
+        {loading ? "Iniciando conversa…" : "Conversar com o Mentor"}
       </button>
     </form>
   );

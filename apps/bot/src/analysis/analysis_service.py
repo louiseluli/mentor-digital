@@ -1,5 +1,5 @@
 """
-analysis_service.py — Orquestrador de análise de conteúdo (Micro-Batch 3.3)
+analysis_service.py — Orquestrador de análise de conteúdo (Micro-Batch 3.3 / 11.x)
 
 Responsabilidade única: receber um ConversationContext após o primeiro conteúdo
 enviado pelo usuário, disparar TODOS os analisadores em paralelo, e persistir
@@ -9,6 +9,7 @@ Fase 3.1  → Google Fact Check Tools API                    (implementado)
 Fase 3.2  → RDAP + VirusTotal + urlscan.io + Open PageRank (implementado)
 Fase 3.3  → GDELT DOC API                                  (implementado)
 Fase 3.4  → Hugging Face Inference API (NLP)               (stub pronto)
+Fase 11.x → Wikipedia API (PT + EN, sem API key)           (implementado)
 
 Os resultados NÃO são exibidos no bot — são consumidos pela plataforma web (Fase 5).
 """
@@ -103,6 +104,23 @@ async def _run_gdelt(query: str) -> dict:
     }
 
 
+async def _run_wikipedia(query: str) -> dict:
+    """Wikipedia API — busca em PT e EN em paralelo, sem chave necessária."""
+    if not query:
+        return {"pt": {"query": query, "results": [], "error": ""}, "en": {"query": query, "results": [], "error": ""}}
+
+    pt_task = asyncio.create_task(search_wikipedia(query, lang="pt"))
+    en_task = asyncio.create_task(search_wikipedia(query, lang="en"))
+    pt_result, en_result = await asyncio.gather(pt_task, en_task, return_exceptions=True)
+
+    return {
+        "pt": pt_result if not isinstance(pt_result, Exception)
+              else {"query": query, "error": str(pt_result), "results": []},
+        "en": en_result if not isinstance(en_result, Exception)
+              else {"query": query, "error": str(en_result), "results": []},
+    }
+
+
 # ── Orquestrador principal ───────────────────────────────────────────────────
 
 async def analyze_content(ctx: ConversationContext) -> dict:
@@ -127,12 +145,13 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         ctx.content_id, ctx.content_type, query[:80] if query else "",
     )
 
-    # ── Fase 3.1 + 3.3 + 3.4 em paralelo: Fact Check, GDELT e NLP ───────────
+    # ── Fase 3.1 + 3.3 + 3.4 + 11.x em paralelo: Fact Check, GDELT, NLP, Wikipedia ──
     fc_task = asyncio.create_task(_run_fact_check(query))
     gdelt_task = asyncio.create_task(_run_gdelt(query))
     nlp_task = asyncio.create_task(_run_nlp(ctx))
-    fc_outcome, gdelt_outcome, nlp_outcome = await asyncio.gather(
-        fc_task, gdelt_task, nlp_task, return_exceptions=True
+    wiki_task = asyncio.create_task(_run_wikipedia(query))
+    fc_outcome, gdelt_outcome, nlp_outcome, wiki_outcome = await asyncio.gather(
+        fc_task, gdelt_task, nlp_task, wiki_task, return_exceptions=True
     )
 
     fact_check = (
@@ -146,6 +165,10 @@ async def analyze_content(ctx: ConversationContext) -> dict:
     nlp = (
         nlp_outcome if not isinstance(nlp_outcome, Exception)
         else {"error": str(nlp_outcome)}
+    )
+    wikipedia = (
+        wiki_outcome if not isinstance(wiki_outcome, Exception)
+        else {"error": str(wiki_outcome), "pt": {"results": []}, "en": {"results": []}}
     )
 
     # ── Fase 3.2: Domain Analysis (apenas para links) ─────────────────────────
@@ -163,6 +186,7 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         "fact_check": fact_check,
         "gdelt": gdelt,
         "nlp": nlp,
+        "wikipedia": wikipedia,
     }
     if domain is not None:
         results["domain"] = domain
@@ -177,9 +201,13 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         len(gdelt.get("por", {}).get("articles", []))
         + len(gdelt.get("en", {}).get("articles", []))
     )
+    total_wiki = (
+        len(wikipedia.get("pt", {}).get("results", []))
+        + len(wikipedia.get("en", {}).get("results", []))
+    )
     logger.info(
-        "Análise concluída | content_id=%s | fc_hits=%d | gdelt_articles=%d | domain=%s | nlp_lang=%s",
-        ctx.content_id, total_fc, total_gdelt,
+        "Análise concluída | content_id=%s | fc_hits=%d | gdelt_articles=%d | wiki_articles=%d | domain=%s | nlp_lang=%s",
+        ctx.content_id, total_fc, total_gdelt, total_wiki,
         domain.get("domain", "") if domain else "—",
         nlp.get("language", "?"),
     )

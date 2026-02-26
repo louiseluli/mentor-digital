@@ -60,6 +60,22 @@ export interface GDELTData {
   articles: GDELTArticle[];
 }
 
+// ── Wikipedia ─────────────────────────────────────────────────────────────────
+
+export interface WikipediaResult {
+  title: string;
+  extract: string;
+  url: string;
+  thumbnail: string;
+  lang: string;
+}
+
+export interface WikipediaData {
+  query: string;
+  results: WikipediaResult[];
+  error: string;
+}
+
 // ── Análise completa ──────────────────────────────────────────────────────────
 
 export interface AnalysisResult {
@@ -82,10 +98,42 @@ export interface AnalysisResult {
     claim: NLPSignal;
     manipulation: NLPSignal;
   };
+  wikipedia?: {
+    pt: WikipediaData;
+    en: WikipediaData;
+  };
   domain?: {
     domain: string;
     error: string;
   };
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+
+export interface ChatRawMessage {
+  type: string;
+  body: string;
+  options?: { id: string; title: string }[];
+}
+
+export interface ChatStartResponse {
+  session_id: string;
+  content_id: string;
+  state: string;
+  messages: ChatRawMessage[];
+}
+
+export interface ChatReplyResponse {
+  session_id: string;
+  state: string;
+  messages: ChatRawMessage[];
+  analysis_ready: boolean;
+  content_id: string;
+}
+
+export interface ChatStatusResponse {
+  ready: boolean;
+  content_id: string;
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
@@ -115,6 +163,51 @@ export async function fetchAnalysis(
     });
     if (!res.ok) return null;
     return res.json() as Promise<AnalysisResult>;
+  } catch {
+    return null;
+  }
+}
+
+export async function startChat(
+  text: string
+): Promise<ChatStartResponse | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/chat/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<ChatStartResponse>;
+  } catch {
+    return null;
+  }
+}
+
+export async function replyChat(
+  sessionId: string,
+  optionId: string
+): Promise<ChatReplyResponse | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/chat/reply/${sessionId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ option_id: optionId }),
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<ChatReplyResponse>;
+  } catch {
+    return null;
+  }
+}
+
+export async function chatStatus(
+  sessionId: string
+): Promise<ChatStatusResponse | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/chat/${sessionId}/status`);
+    if (!res.ok) return null;
+    return res.json() as Promise<ChatStatusResponse>;
   } catch {
     return null;
   }
