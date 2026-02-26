@@ -76,6 +76,53 @@ export interface WikipediaData {
   error: string;
 }
 
+// ── Brazilian FC ─────────────────────────────────────────────────────────────
+
+export interface BrazilianFCResult {
+  title: string;
+  url: string;
+  date: string;
+  source: string;
+  snippet: string;
+}
+
+export interface BrazilianFCData {
+  query: string;
+  results: BrazilianFCResult[];
+  error: string;
+}
+
+// ── Risk Score ────────────────────────────────────────────────────────────────
+
+export type RiskVerdict =
+  | "verified_false"
+  | "mixed"
+  | "verified_true"
+  | "no_clear_verdict"
+  | "no_data";
+
+export type RiskLevel = "low" | "moderate" | "high" | "critical";
+
+export interface RiskScore {
+  overall: number;            // 0–1
+  level: RiskLevel;
+  level_label: string;        // "Baixo risco" etc.
+  verdict: RiskVerdict;
+  verdict_pt: string;         // texto em português
+  dimensions: {
+    linguistic: number;
+    factcheck: number | null; // null se sem dados FC
+    coverage: number;
+  };
+  confidence: number;         // 0–1
+  fc_verdict_breakdown: {
+    total: number;
+    false: number;
+    mixed: number;
+    true: number;
+  };
+}
+
 // ── Análise completa ──────────────────────────────────────────────────────────
 
 export interface AnalysisResult {
@@ -102,6 +149,8 @@ export interface AnalysisResult {
     pt: WikipediaData;
     en: WikipediaData;
   };
+  brazilian_fc?: BrazilianFCData;
+  risk_score?: RiskScore;
   domain?: {
     domain: string;
     error: string;

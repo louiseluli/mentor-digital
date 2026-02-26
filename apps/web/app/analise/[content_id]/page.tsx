@@ -66,11 +66,16 @@ export default async function AnalisePage({ params }: Props) {
           urgency={data.nlp.urgency}
           claim={data.nlp.claim}
           manipulation={data.nlp.manipulation}
+          riskScore={data.risk_score}
         />
       )}
 
       {/* Verificações de fatos */}
-      <FactCheckSection pt={data.fact_check.pt} en={data.fact_check.en} />
+      <FactCheckSection
+        pt={data.fact_check.pt}
+        en={data.fact_check.en}
+        brazilianFc={data.brazilian_fc}
+      />
 
       {/* Cobertura midiática */}
       <GDELTSection por={data.gdelt.por} en={data.gdelt.en} />

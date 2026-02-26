@@ -170,36 +170,62 @@ def _collect_web_messages(fsm, initial_response: dict) -> list:
 
 
 def _format_findings_for_chat(results: dict) -> str:
-    """Formata achados de análise para injetar na mensagem de fechamento da conversa web."""
-    fc = results.get("fact_check", {})
-    claims = fc.get("pt", {}).get("results", []) + fc.get("en", {}).get("results", [])
+    """Formata achados de análise (com risk_score) para injetar no fechamento da conversa web."""
+    risk = results.get("risk_score") or {}
+    level = risk.get("level", "")
+    verdict = risk.get("verdict", "no_data")
+    verdict_pt = risk.get("verdict_pt", "Sem verificações específicas encontradas")
+    overall = risk.get("overall", 0.0)
+    confidence = risk.get("confidence", 0.0)
+    breakdown = risk.get("fc_verdict_breakdown", {})
+
+    level_emoji = {"low": "🟢", "moderate": "🟡", "high": "🟠", "critical": "🔴"}.get(level, "⚪")
+
+    lines = ["🔍 Enquanto conversávamos, analisamos o conteúdo:"]
+    lines.append(f"\n{level_emoji} Risco geral: {overall * 100:.0f}% — {verdict_pt}")
+    lines.append(f"📊 Confiança da análise: {confidence * 100:.0f}%")
+
+    total = breakdown.get("total", 0)
+    if total > 0:
+        false_c = breakdown.get("false", 0)
+        true_c = breakdown.get("true", 0)
+        mixed_c = breakdown.get("mixed", 0)
+        lines.append(f"\n✅ {total} verificação(ões) encontrada(s): "
+                     f"{false_c} falso, {mixed_c} misto, {true_c} verdadeiro")
+        # Mostrar detalhes de até 2 claims
+        fc = results.get("fact_check", {})
+        claims = fc.get("pt", {}).get("results", []) + fc.get("en", {}).get("results", [])
+        for claim in claims[:2]:
+            reviews = claim.get("reviews", [])
+            if reviews:
+                r = reviews[0]
+                text = claim.get("text", "")[:70]
+                lines.append(f'  • "{text}…"\n    {r.get("publisher_name", "")}: {r.get("text_rating", "")}')
+    else:
+        lines.append("\n  Não encontramos fact-checks específicos para este conteúdo.")
+
+    # Verificadores brasileiros via RSS
+    br_fc = results.get("brazilian_fc", {}).get("results", [])
+    if br_fc:
+        sources = list({r.get("source", "") for r in br_fc})
+        lines.append(f"\n🇧🇷 Mencionado em {len(br_fc)} artigo(s) de verificadores brasileiros "
+                     f"({', '.join(sources)})")
+
+    # GDELT
     gdelt = results.get("gdelt", {})
     total_articles = (
         len(gdelt.get("por", {}).get("articles", []))
         + len(gdelt.get("en", {}).get("articles", []))
     )
-    wiki = results.get("wikipedia", {})
-    wiki_results = wiki.get("pt", {}).get("results", []) + wiki.get("en", {}).get("results", [])
-
-    lines = ["🔍 Enquanto conversávamos, analisamos o conteúdo:"]
-
-    if claims:
-        lines.append(f"\n✅ {len(claims)} verificação(ões) de fatos encontrada(s):")
-        for claim in claims[:2]:
-            reviews = claim.get("reviews", [])
-            if reviews:
-                r = reviews[0]
-                text = claim.get("text", "")[:80]
-                lines.append(f'  • "{text}…"\n    {r.get("publisher_name", "")}: {r.get("text_rating", "")}')
-    else:
-        lines.append("  Não encontramos fact-checks específicos para este conteúdo.")
-
     if total_articles:
         lines.append(f"\n📰 {total_articles} artigo(s) na mídia sobre o tema.")
 
+    # Wikipedia
+    wiki = results.get("wikipedia", {})
+    wiki_results = wiki.get("pt", {}).get("results", []) + wiki.get("en", {}).get("results", [])
     if wiki_results:
         w = wiki_results[0]
-        extract = w.get("extract", "")[:120]
+        extract = w.get("extract", "")[:100]
         lines.append(f"\n📚 Wikipedia — {w.get('title', '')}: {extract}…")
 
     return "\n".join(lines)

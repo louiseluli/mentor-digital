@@ -1,5 +1,5 @@
 """
-analysis_service.py — Orquestrador de análise de conteúdo (Micro-Batch 3.3 / 11.x)
+analysis_service.py — Orquestrador de análise de conteúdo (Micro-Batch 3.3 / 12.x)
 
 Responsabilidade única: receber um ConversationContext após o primeiro conteúdo
 enviado pelo usuário, disparar TODOS os analisadores em paralelo, e persistir
@@ -10,6 +10,8 @@ Fase 3.2  → RDAP + VirusTotal + urlscan.io + Open PageRank (implementado)
 Fase 3.3  → GDELT DOC API                                  (implementado)
 Fase 3.4  → Hugging Face Inference API (NLP)               (stub pronto)
 Fase 11.x → Wikipedia API (PT + EN, sem API key)           (implementado)
+Fase 12.x → Brazilian FC RSS (Aos Fatos + Agência Lupa)    (implementado)
+Fase 12.x → Pontuação multi-dimensional (scoring.py)       (implementado)
 
 Os resultados NÃO são exibidos no bot — são consumidos pela plataforma web (Fase 5).
 """
@@ -23,6 +25,9 @@ from src.analysis.fact_checker import search_claims, serialize_response
 from src.analysis.domain_checker import check_domain, serialize_domain_response
 from src.analysis.gdelt import search_articles, serialize_gdelt_response
 from src.analysis.nlp import analyze_text, serialize_nlp_result
+from src.analysis.wikipedia_api import search_wikipedia
+from src.analysis.brazilian_fc import search_brazilian_fc
+from src.analysis.scoring import compute_risk_score
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +126,13 @@ async def _run_wikipedia(query: str) -> dict:
     }
 
 
+async def _run_brazilian_fc(query: str, redis_client=None) -> dict:
+    """Verificadores brasileiros via RSS (Aos Fatos + Agência Lupa) — keyword-match."""
+    if not query:
+        return {"query": query, "results": [], "error": ""}
+    return await search_brazilian_fc(query, redis_client=redis_client)
+
+
 # ── Orquestrador principal ───────────────────────────────────────────────────
 
 async def analyze_content(ctx: ConversationContext) -> dict:
@@ -145,13 +157,24 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         ctx.content_id, ctx.content_type, query[:80] if query else "",
     )
 
-    # ── Fase 3.1 + 3.3 + 3.4 + 11.x em paralelo: Fact Check, GDELT, NLP, Wikipedia ──
+    # ── Todas as fontes em paralelo: FC, GDELT, NLP, Wikipedia, Brazilian FC ──
+    redis_client = None
+    try:
+        from src.session_manager import SessionManager
+        import os
+        redis_client = SessionManager.from_url(
+            os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        ).redis
+    except Exception:
+        pass  # sem cache — continua sem Redis
+
     fc_task = asyncio.create_task(_run_fact_check(query))
     gdelt_task = asyncio.create_task(_run_gdelt(query))
     nlp_task = asyncio.create_task(_run_nlp(ctx))
     wiki_task = asyncio.create_task(_run_wikipedia(query))
-    fc_outcome, gdelt_outcome, nlp_outcome, wiki_outcome = await asyncio.gather(
-        fc_task, gdelt_task, nlp_task, wiki_task, return_exceptions=True
+    br_fc_task = asyncio.create_task(_run_brazilian_fc(query, redis_client))
+    fc_outcome, gdelt_outcome, nlp_outcome, wiki_outcome, br_fc_outcome = await asyncio.gather(
+        fc_task, gdelt_task, nlp_task, wiki_task, br_fc_task, return_exceptions=True
     )
 
     fact_check = (
@@ -170,6 +193,10 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         wiki_outcome if not isinstance(wiki_outcome, Exception)
         else {"error": str(wiki_outcome), "pt": {"results": []}, "en": {"results": []}}
     )
+    brazilian_fc = (
+        br_fc_outcome if not isinstance(br_fc_outcome, Exception)
+        else {"error": str(br_fc_outcome), "results": []}
+    )
 
     # ── Fase 3.2: Domain Analysis (apenas para links) ─────────────────────────
     domain = None
@@ -187,9 +214,17 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         "gdelt": gdelt,
         "nlp": nlp,
         "wikipedia": wikipedia,
+        "brazilian_fc": brazilian_fc,
     }
     if domain is not None:
         results["domain"] = domain
+
+    # ── Pontuação multi-dimensional (síncrono, rápido) ─────────────────────────
+    try:
+        results["risk_score"] = compute_risk_score(results)
+    except Exception as exc:
+        logger.error("Risk scoring falhou: %s", exc)
+        results["risk_score"] = None
 
     ctx.analysis_results.update(results)
 
@@ -205,9 +240,13 @@ async def analyze_content(ctx: ConversationContext) -> dict:
         len(wikipedia.get("pt", {}).get("results", []))
         + len(wikipedia.get("en", {}).get("results", []))
     )
+    total_br_fc = len(brazilian_fc.get("results", []))
+    risk = results.get("risk_score") or {}
     logger.info(
-        "Análise concluída | content_id=%s | fc_hits=%d | gdelt_articles=%d | wiki_articles=%d | domain=%s | nlp_lang=%s",
-        ctx.content_id, total_fc, total_gdelt, total_wiki,
+        "Análise concluída | content_id=%s | fc=%d | gdelt=%d | wiki=%d | br_fc=%d | "
+        "risk=%.2f(%s) | domain=%s | lang=%s",
+        ctx.content_id, total_fc, total_gdelt, total_wiki, total_br_fc,
+        risk.get("overall", 0), risk.get("level", "?"),
         domain.get("domain", "") if domain else "—",
         nlp.get("language", "?"),
     )
