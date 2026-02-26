@@ -131,8 +131,18 @@ flow:
         next_state: "closing"
 
   deepening_unknown_source:
-    message: "É um bom ponto para pensar. O quanto a veracidade importa para você na hora de compartilhar? Às vezes, verificar antes protege quem recebe a informação."
-    next_state: "closing"
+    message: "É um bom ponto para pensar. Verificar antes protege quem recebe a informação. Qual sua relação com a veracidade desse conteúdo?"
+    type: "buttons"
+    options:
+      - id: "truth_matters"
+        title: "A veracidade importa muito"
+        next_state: "closing"
+      - id: "not_sure_matters"
+        title: "Não tenho certeza"
+        next_state: "closing"
+      - id: "sharing_anyway"
+        title: "Vou compartilhar mesmo assim"
+        next_state: "closing"
 
   deepening_fear:
     message: "Quando sentimos medo, nosso cérebro quer agir rápido para proteger quem amamos. Isso é lindo, mas pode nos levar a compartilhar sem verificar. Esse conteúdo pede urgência?"
@@ -192,7 +202,7 @@ flow:
 
   # ── FECHAMENTO ──────────────────────────────────────────────────────────────
   closing:
-    message: "Suas reflexões são muito valiosas! 💛 Agora, com base em tudo o que você pensou, você ainda quer compartilhar este conteúdo?"
+    message: "Suas reflexões são muito valiosas! 💛 Agora, com base em tudo o que você pensou, você ainda quer compartilhar este conteúdo?\n\n🔗 Ver análise completa: {web_platform_url}/analise/{content_id}"
     type: "buttons"
     options:
       - id: "yes_share"

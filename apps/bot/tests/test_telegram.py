@@ -99,8 +99,8 @@ def test_collect_messages_returns_initial_when_state_has_options():
     assert has_options
 
 
-def test_collect_messages_auto_advances_deepening_unknown_source():
-    """deepening_unknown_source não tem opções → deve avançar para closing."""
+def test_collect_messages_deepening_unknown_source_has_options():
+    """deepening_unknown_source agora tem opções → permanece no estado até o usuário escolher."""
     fsm = _make_fsm()
     fsm.process_input("conteúdo de teste")
     fsm.process_input("inform")
@@ -108,8 +108,9 @@ def test_collect_messages_auto_advances_deepening_unknown_source():
     response = fsm.process_input("unknown_source")
     messages = _collect_messages(fsm, response)
 
-    assert len(messages) >= 2
-    assert fsm.state == "closing"
+    assert len(messages) >= 1
+    # Tem opções → não auto-avança para closing
+    assert fsm.state == "deepening_unknown_source"
 
 
 def test_collect_messages_auto_advances_feedback_to_end():

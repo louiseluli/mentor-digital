@@ -22,6 +22,7 @@ from src.security import pseudonymize
 from src.session_manager import SessionManager
 from src.content_detector import detect_text_type
 from src.analysis.analysis_service import analyze_content
+from src.analysis.nlp import analyze_text, serialize_nlp_result
 from src.analytics import AnalyticsEvent, record_event
 
 load_dotenv()
@@ -97,6 +98,43 @@ async def _send_messages(
             await target.reply_text(body)
 
 
+# ── FC summary formatter ──────────────────────────────────────────────────────
+
+def _format_fc_summary(results: dict | None) -> str:
+    """Formata resumo de fact-checks e cobertura GDELT para notificação."""
+    if not results:
+        return "Não conseguimos buscar verificações de fatos para este conteúdo."
+
+    fc = results.get("fact_check", {})
+    claims_pt = fc.get("pt", {}).get("results", [])
+    claims_en = fc.get("en", {}).get("results", [])
+    all_claims = claims_pt + claims_en
+
+    gdelt = results.get("gdelt", {})
+    articles_por = gdelt.get("por", {}).get("articles", [])
+    articles_en = gdelt.get("en", {}).get("articles", [])
+    total_articles = len(articles_por) + len(articles_en)
+
+    lines = []
+    if all_claims:
+        lines.append(f"🔎 {len(all_claims)} verificação(ões) de fatos encontrada(s):")
+        for claim in all_claims[:2]:
+            reviews = claim.get("reviews", [])
+            if reviews:
+                r = reviews[0]
+                publisher = r.get("publisher_name", "")
+                rating = r.get("text_rating", "")
+                text = claim.get("text", "")[:80]
+                lines.append(f'  • "{text}…"\n    {publisher}: {rating}')
+    else:
+        lines.append("Não encontramos fact-checks específicos para este conteúdo.")
+
+    if total_articles:
+        lines.append(f"📰 {total_articles} artigo(s) na mídia sobre o tema.")
+
+    return "\n".join(lines)
+
+
 # ── Background analysis ───────────────────────────────────────────────────────
 
 async def _analyze_and_persist(
@@ -155,6 +193,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     fsm = mgr.get_or_create(user_id)
     is_first_content = fsm.state == "awaiting_content"
     content_type = detect_text_type(text) if is_first_content else "text"
+
+    # Injetar NLP síncrono antes do FSM processar o primeiro conteúdo
+    if is_first_content:
+        nlp_result = analyze_text(text)
+        fsm.nlp_data = serialize_nlp_result(nlp_result)
+
     response = fsm.process_input(text, content_type)
     messages = _collect_messages(fsm, response)
 
@@ -169,10 +213,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         _bot = context.bot
 
         async def _notify(content_id: str) -> None:
+            results = mgr.get_analysis(content_id)
+            fc_summary = _format_fc_summary(results)
             link = f"{WEB_URL}/analise/{content_id}"
             await _bot.send_message(
                 chat_id=_chat_id,
-                text=f"✅ Análise pronta!\n\nAcesse os resultados:\n{link}",
+                text=f"🔍 Análise concluída!\n\n{fc_summary}\n\n👉 Ver análise completa:\n{link}",
             )
 
         asyncio.create_task(
@@ -205,6 +251,12 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     mgr = _get_session_mgr()
     fsm = mgr.get_or_create(user_id)
     is_first_content = fsm.state == "awaiting_content"
+
+    # Injetar NLP síncrono (usa caption/texto disponível)
+    if is_first_content and content_raw and not content_raw.startswith("["):
+        nlp_result = analyze_text(content_raw)
+        fsm.nlp_data = serialize_nlp_result(nlp_result)
+
     response = fsm.process_input(content_raw, content_type)
     messages = _collect_messages(fsm, response)
 
@@ -218,10 +270,12 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         _bot = context.bot
 
         async def _notify_media(content_id: str) -> None:
+            results = mgr.get_analysis(content_id)
+            fc_summary = _format_fc_summary(results)
             link = f"{WEB_URL}/analise/{content_id}"
             await _bot.send_message(
                 chat_id=_chat_id,
-                text=f"✅ Análise pronta!\n\nAcesse os resultados:\n{link}",
+                text=f"🔍 Análise concluída!\n\n{fc_summary}\n\n👉 Ver análise completa:\n{link}",
             )
 
         asyncio.create_task(

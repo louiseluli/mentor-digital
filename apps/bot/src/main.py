@@ -115,7 +115,7 @@ _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
-    allow_methods=["GET", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -142,6 +142,32 @@ async def get_analysis(request: Request, content_id: str):
     if data is None:
         raise HTTPException(status_code=404, detail="Análise não encontrada ou expirada")
     return data
+
+
+@app.post("/analyze")
+@limiter.limit("10/minute")
+async def submit_analysis(request: Request):
+    """Análise direta via plataforma web — sem necessidade do bot.
+
+    Aceita texto livre, roda análise completa (NLP + fact-check + GDELT),
+    persiste resultado no Redis e retorna content_id para acesso via /analise/{id}.
+
+    Rate limit: 10 req/min por IP.
+    """
+    from src.models import ConversationContext
+    from src.analysis.analysis_service import analyze_content
+
+    body = await request.json()
+    text = (body.get("text") or "").strip()
+    if len(text) < 10:
+        raise HTTPException(status_code=422, detail="Texto muito curto (mínimo 10 caracteres)")
+    if len(text) > 5000:
+        raise HTTPException(status_code=422, detail="Texto muito longo (máximo 5000 caracteres)")
+
+    ctx = ConversationContext(user_id="web", platform="web", content_raw=text)
+    results = await analyze_content(ctx)
+    _get_session_mgr().save_analysis(ctx.content_id, results)
+    return {"content_id": ctx.content_id}
 
 
 @app.get("/analytics/summary")

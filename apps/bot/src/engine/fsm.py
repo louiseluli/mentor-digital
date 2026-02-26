@@ -11,17 +11,45 @@ TERMINAL_STATES = frozenset({
     "closing", "feedback_share", "feedback_not_share", "feedback_investigate", "end"
 })
 FALLBACK_MESSAGE = "Desculpe, não entendi. Pode escolher uma das opções acima? 😊"
-MAX_INTERACTIONS = 4
+MAX_INTERACTIONS = 8
 
 
 class QuestioningFSM:
     """Motor de estados para o fluxo de questionamento do Mentor Digital."""
 
-    def __init__(self, context: ConversationContext):
+    def __init__(self, context: ConversationContext, nlp_data: dict | None = None):
         self.context = context
+        self.nlp_data = nlp_data
         self.state = "awaiting_content"
         with open(FLOW_PATH, encoding="utf-8") as f:
             self._flow = yaml.safe_load(f)["flow"]
+
+    @staticmethod
+    def _nlp_intro(nlp_data: dict) -> str:
+        """Gera mensagem educativa com os sinais NLP detectados no texto."""
+        signals = []
+        urgency = nlp_data.get("urgency", {})
+        manipulation = nlp_data.get("manipulation", {})
+        claim = nlp_data.get("claim", {})
+
+        if urgency.get("score", 0) >= 0.5:
+            evidence = urgency.get("evidence", [])
+            hint = f" — \"{evidence[0]}\"" if evidence else ""
+            signals.append(f"🚨 Linguagem de urgência{hint}: cria pressão para agir sem pensar")
+
+        if manipulation.get("score", 0) >= 0.5:
+            evidence = manipulation.get("evidence", [])
+            hint = f" — \"{evidence[0]}\"" if evidence else ""
+            signals.append(f"⚠️ Apelo emocional forte{hint}: pode estar tentando influenciar sua reação")
+
+        if claim.get("score", 0) >= 0.5:
+            signals.append("📊 Afirmações verificáveis: números, estatísticas ou autoridades citadas")
+
+        if not signals:
+            return "✅ Linguagem relativamente neutra — mas sempre vale checar a fonte antes de compartilhar."
+
+        intro = "Analisando este texto, percebi:\n" + "\n".join(f"• {s}" for s in signals)
+        return intro
 
     def process_input(self, user_input: str, content_type: str = "text") -> dict:
         self.context.interaction_count += 1
@@ -48,6 +76,10 @@ class QuestioningFSM:
         # Insere reconhecimento específico ao tipo antes da pergunta de motivação
         ack = {"type": "text", "body": get_acknowledgment(content_type)}
         response["messages"].insert(0, ack)
+        # Insere sinais NLP detectados no início (antes do ack) se disponíveis
+        if self.nlp_data:
+            nlp_msg = {"type": "text", "body": self._nlp_intro(self.nlp_data)}
+            response["messages"].insert(0, nlp_msg)
         return response
 
     def _handle_yaml_state(self, user_input: str) -> dict:

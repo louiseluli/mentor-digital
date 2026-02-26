@@ -104,14 +104,15 @@ def test_fsm_reflection_answers_recorded():
     assert "trust_source" in ctx.reflection_answers
 
 
-def test_fsm_auto_advance_no_options_state():
-    """States without options (deepening_unknown_source) auto-advance on next input."""
+def test_fsm_deepening_unknown_source_has_options():
+    """deepening_unknown_source agora tem opções — exige seleção para avançar ao closing."""
     fsm, _ = make_fsm()
     fsm.process_input("notícia")         # → greeting
     fsm.process_input("inform")          # → exploring_inform
-    fsm.process_input("unknown_source")  # → deepening_unknown_source (no options)
+    fsm.process_input("unknown_source")  # → deepening_unknown_source
     assert fsm.state == "deepening_unknown_source"
-    fsm.process_input("qualquer coisa")  # auto-advance → closing
+    # Estado tem opções, portanto NÃO auto-avança com input aleatório
+    fsm.process_input("truth_matters")   # seleciona opção → closing
     assert fsm.state == "closing"
 
 
