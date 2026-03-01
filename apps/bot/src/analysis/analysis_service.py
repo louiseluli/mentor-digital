@@ -18,6 +18,7 @@ Os resultados NÃO são exibidos no bot — são consumidos pela plataforma web 
 
 import asyncio
 import logging
+import re
 from datetime import datetime, UTC
 
 from src.models import ConversationContext
@@ -51,25 +52,56 @@ def _extract_query(ctx: ConversationContext, max_length: int = 200) -> str:
     return truncated[:last_space] if last_space > 0 else truncated
 
 
+def _extract_fc_query(full_query: str, max_length: int = 90) -> str:
+    """Extrai query curta focada na afirmação principal para a Google FC API.
+
+    A API retorna melhores resultados com queries curtas (idealmente ≤90 chars)
+    porque faz matching semântico de claims — não busca full-text.
+
+    Estratégia: usa a primeira frase do texto, onde geralmente está a afirmação
+    central. Se não encontrar pontuação de fim de frase nos primeiros 120 chars,
+    trunca em max_length sem cortar palavras.
+    """
+    if not full_query or len(full_query) <= max_length:
+        return full_query
+    # Primeira frase: primeiro . ! ? dentro dos primeiros 120 chars
+    m = re.search(r"[.!?]", full_query[:120])
+    if m and m.start() >= 15:          # frase mínima de 15 chars para ter sentido
+        return full_query[:m.start()].strip()
+    # Fallback: trunca em max_length sem cortar palavra no meio
+    truncated = full_query[:max_length]
+    last_space = truncated.rfind(" ")
+    return truncated[:last_space] if last_space > 20 else truncated
+
+
 # ── Analisadores ──────────────────────────────────────────────────────────────
 
 async def _run_fact_check(query: str) -> dict:
-    """Google Fact Check Tools API — busca em PT e EN para maior cobertura."""
+    """Google Fact Check Tools API — busca em PT e EN para maior cobertura.
+
+    Usa _extract_fc_query() para obter a primeira frase do texto — a Google FC
+    API faz matching semântico de claims e retorna muito mais resultados com
+    queries curtas (≤90 chars) do que com parágrafos completos.
+    page_size=10 para obter o máximo de resultados permitido pela API.
+    """
     from src.analysis.fact_checker import FactCheckResponse
 
     if not query:
         empty = serialize_response(FactCheckResponse())
         return {"pt": empty, "en": empty}
 
-    pt_task = asyncio.create_task(search_claims(query, language_code="pt"))
-    en_task = asyncio.create_task(search_claims(query, language_code="en"))
+    fc_query = _extract_fc_query(query)
+    logger.debug("FC query: %r (original: %d chars)", fc_query, len(query))
+
+    pt_task = asyncio.create_task(search_claims(fc_query, language_code="pt", page_size=10))
+    en_task = asyncio.create_task(search_claims(fc_query, language_code="en", page_size=10))
     pt_result, en_result = await asyncio.gather(pt_task, en_task, return_exceptions=True)
 
     return {
         "pt": serialize_response(pt_result) if not isinstance(pt_result, Exception)
-              else {"query": query, "error": str(pt_result), "results": []},
+              else {"query": fc_query, "error": str(pt_result), "results": []},
         "en": serialize_response(en_result) if not isinstance(en_result, Exception)
-              else {"query": query, "error": str(en_result), "results": []},
+              else {"query": fc_query, "error": str(en_result), "results": []},
     }
 
 
