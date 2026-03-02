@@ -290,3 +290,298 @@ def test_serialize_nlp_result_word_count_is_int():
     result = analyze_text("Texto de teste com cinco palavras aqui")
     s = serialize_nlp_result(result)
     assert isinstance(s["word_count"], int)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NOVOS TESTES — Padrões baseados em datasets acadêmicos
+# (LIAR, FakeNewsNet, CHECKED, NELA-GT, PHEME, FakevsSatire,
+#  Garg & Sharma 2022, Choudhary & Arora 2021, Horne & Adali 2017)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Anti-vacina (PT) ────────────────────────────────────────────────────────
+
+class TestAntiVaxPT:
+    def test_nao_vacine_filhos(self):
+        result = analyze_text("NÃO VACINE seu filho! A vacina mata crianças e causa autismo")
+        assert result.manipulation.score >= 0.40, f"manipulation={result.manipulation.score}"
+        assert any("anti-vax" in e for e in result.manipulation.evidence)
+
+    def test_vacina_mata(self):
+        result = analyze_text("A vacina mata milhares de pessoas todos os anos")
+        assert result.manipulation.score >= 0.30
+
+    def test_vacina_veneno(self):
+        result = analyze_text("A vacina é veneno puro que estão injetando nas crianças")
+        assert result.manipulation.score >= 0.40
+
+    def test_efeitos_colaterais_escondidos(self):
+        result = analyze_text("Os efeitos colaterais escondidos da vacina são terríveis")
+        assert result.manipulation.score >= 0.30
+        assert any("efeitos colaterais" in e for e in result.manipulation.evidence)
+
+    def test_ingredientes_toxicos(self):
+        result = analyze_text("Esta vacina contém ingredientes tóxicos como mercúrio e alumínio")
+        assert result.manipulation.score >= 0.40
+
+    def test_mortes_pos_vacina(self):
+        result = analyze_text("Já registraram 500 mortes após vacinação no Brasil")
+        assert result.manipulation.score >= 0.30
+
+
+# ── Anti-vacina (EN) ────────────────────────────────────────────────────────
+
+class TestAntiVaxEN:
+    def test_dont_vaccinate(self):
+        result = analyze_text("Don't vaccinate your children! The vaccine is deadly poison")
+        assert result.manipulation.score >= 0.40
+
+    def test_vaccine_kills(self):
+        result = analyze_text("The vaccine kills thousands of people every year")
+        assert result.manipulation.score >= 0.30
+
+    def test_vaccine_autism(self):
+        result = analyze_text("The vaccine causes autism in children, studies confirm it")
+        assert result.manipulation.score >= 0.30
+        assert any("autism" in e for e in result.manipulation.evidence)
+
+    def test_hidden_side_effects(self):
+        result = analyze_text("They don't want you to know about the hidden side effects")
+        assert result.manipulation.score >= 0.40
+
+    def test_rushed_vaccine(self):
+        result = analyze_text("This rushed vaccine was never properly tested on humans")
+        assert result.manipulation.score >= 0.30
+
+
+# ── Negação Científica (PT) ─────────────────────────────────────────────────
+
+class TestScienceDenialPT:
+    def test_nasa_admitiu(self):
+        result = analyze_text("NASA admitiu que a Terra é plana e que nunca pisamos na Lua")
+        assert result.manipulation.score >= 0.40
+        assert any("NASA" in e or "admitiu" in e for e in result.manipulation.evidence)
+
+    def test_aquecimento_global_farsa(self):
+        result = analyze_text("O aquecimento global é uma farsa criada para controlar a população")
+        assert result.manipulation.score >= 0.40
+
+    def test_cientistas_mentem(self):
+        result = analyze_text("Os cientistas mentem para ganhar financiamento do governo")
+        assert result.manipulation.score >= 0.30
+
+    def test_dados_manipulados(self):
+        result = analyze_text("Os dados foram manipulados para justificar o lockdown")
+        assert result.manipulation.score >= 0.30
+
+    def test_consenso_falso(self):
+        result = analyze_text("O consenso científico é falso e comprado pela indústria")
+        assert result.manipulation.score >= 0.40
+
+
+# ── Negação Científica (EN) ─────────────────────────────────────────────────
+
+class TestScienceDenialEN:
+    def test_global_warming_hoax(self):
+        result = analyze_text("Global warming is a hoax created by the elite to control us")
+        assert result.manipulation.score >= 0.40
+
+    def test_scientists_lie(self):
+        result = analyze_text("Scientists lie about climate change for grant money")
+        assert result.manipulation.score >= 0.30
+
+    def test_data_fabricated(self):
+        result = analyze_text("The data was fabricated to justify the government response")
+        assert result.manipulation.score >= 0.30
+
+    def test_evolution_just_theory(self):
+        result = analyze_text("Evolution is just a theory that has never been proven")
+        assert result.manipulation.score >= 0.30
+
+
+# ── Desinformação de Saúde (PT) ─────────────────────────────────────────────
+
+class TestHealthDisinfoPT:
+    def test_ivermectina_cura(self):
+        result = analyze_text("Ivermectina cura COVID-19 em 48 horas, médicos proibidos de falar")
+        assert result.manipulation.score >= 0.50
+
+    def test_cha_cura(self):
+        result = analyze_text("Chá de boldo cura o câncer em 30 dias, pesquisem vocês mesmos")
+        assert result.manipulation.score >= 0.40
+
+    def test_quimioterapia_veneno(self):
+        result = analyze_text("Quimioterapia é veneno puro. A cura do câncer escondida pela indústria")
+        assert result.manipulation.score >= 0.50
+
+    def test_nao_existe_virus(self):
+        result = analyze_text("Não existe vírus, isso é tudo uma farsa para vender vacina")
+        assert result.manipulation.score >= 0.40
+
+    def test_protocolo_proibido(self):
+        result = analyze_text("Existe um protocolo proibido que os médicos não podem revelar")
+        assert result.manipulation.score >= 0.40
+
+
+# ── Desinformação de Saúde (EN) ─────────────────────────────────────────────
+
+class TestHealthDisinfoEN:
+    def test_ivermectin_cures(self):
+        result = analyze_text("Ivermectin cures COVID in 48 hours, doctors banned from speaking")
+        assert result.manipulation.score >= 0.50
+
+    def test_lemon_water_cures(self):
+        result = analyze_text("Lemon water cures cancer naturally, do your own research")
+        assert result.manipulation.score >= 0.40
+
+    def test_chemo_is_poison(self):
+        result = analyze_text("Chemotherapy is poison, cancer cure hidden by big pharma")
+        assert result.manipulation.score >= 0.50
+
+    def test_covid_is_flu(self):
+        result = analyze_text("COVID is just a flu, the pandemic doesn't exist")
+        assert result.manipulation.score >= 0.40
+
+
+# ── Atribuição Vaga de Fontes ────────────────────────────────────────────────
+
+class TestVagueAttrPT:
+    def test_dizem_que(self):
+        result = analyze_text("Dizem que o governo está escondendo a verdade sobre a vacina")
+        assert result.manipulation.score >= 0.20
+
+    def test_pesquisem_voces_mesmos(self):
+        result = analyze_text("Pesquisem vocês mesmos, a mídia não vai mostrar isso")
+        assert result.manipulation.score >= 0.30
+
+    def test_vi_no_whatsapp(self):
+        result = analyze_text("Vi no WhatsApp que a vacina causa problemas graves")
+        assert result.manipulation.score >= 0.20
+
+
+class TestVagueAttrEN:
+    def test_they_say(self):
+        result = analyze_text("They say the government is hiding the truth about the vaccine")
+        assert result.manipulation.score >= 0.20
+
+    def test_do_your_own_research(self):
+        result = analyze_text("Do your own research, the media won't show you this")
+        assert result.manipulation.score >= 0.30
+
+
+# ── Apelo Emocional Infantil ─────────────────────────────────────────────────
+
+class TestChildAppeal:
+    def test_proteja_filhos_pt(self):
+        result = analyze_text("Proteja seus filhos! Estão envenenando as crianças na escola")
+        assert result.manipulation.score >= 0.40
+
+    def test_children_dying_en(self):
+        result = analyze_text("Children are dying from the vaccine, protect your kids now!")
+        assert result.manipulation.score >= 0.40
+
+
+# ── Golpe / Manipulação Financeira ───────────────────────────────────────────
+
+class TestFinancialScam:
+    def test_dinheiro_facil_pt(self):
+        result = analyze_text("Ganhe dinheiro fácil trabalhando de casa, clique no link")
+        assert result.manipulation.score >= 0.30
+
+    def test_pyramid_scheme_en(self):
+        result = analyze_text("This is not a pyramid scheme, invest now before it's too late")
+        assert result.manipulation.score >= 0.40
+
+
+# ── Hedging (Garg & Sharma 2022, Choudhary & Arora 2021) ────────────────────
+
+class TestHedging:
+    def test_no_hedging_boosts_manipulation(self):
+        """Texto com afirmações e manipulação mas sem hedging → boost."""
+        text = "A vacina mata crianças, cientistas mentem sobre os dados"
+        result = analyze_text(text)
+        assert any("sem hedging" in e for e in result.manipulation.evidence)
+
+    def test_hedging_reduces_manipulation(self):
+        """Texto com hedging presente → manipulação reduzida."""
+        text = "Possivelmente pode haver efeitos colaterais, segundo alguns estudos"
+        result = analyze_text(text)
+        # Should not have high manipulation
+        assert result.manipulation.score < 0.30
+
+    def test_legitimate_news_low_score(self):
+        """Notícia legítima com hedging e fontes deve ter score baixo."""
+        text = ("Segundo pesquisadores da Universidade de São Paulo, "
+                "o medicamento pode ter potencial terapêutico, "
+                "embora mais estudos sejam necessários para confirmar os resultados.")
+        result = analyze_text(text)
+        assert result.manipulation.score < 0.15, f"manipulation={result.manipulation.score}"
+
+
+# ── Textos completos: integração PT + EN ────────────────────────────────
+
+class TestFullTextIntegration:
+    def test_antivax_complete_pt(self):
+        """Texto anti-vax completo em PT deve receber score alto."""
+        text = (
+            "URGENTE! NÃO VACINE SEU FILHO! A vacina da dengue mata crianças. "
+            "Os efeitos colaterais escondidos são terríveis. O governo esconde "
+            "a verdade porque a indústria farmacêutica paga bilhões. "
+            "Pesquisem vocês mesmos antes que censurem! Compartilhem!!!"
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score >= 0.60, f"manipulation={result.manipulation.score}"
+        assert result.urgency.score >= 0.30, f"urgency={result.urgency.score}"
+
+    def test_antivax_complete_en(self):
+        """Texto anti-vax completo em EN deve receber score alto."""
+        text = (
+            "BREAKING! Don't vaccinate your children! The vaccine kills "
+            "thousands and they're hiding the side effects. Big pharma "
+            "doesn't want you to know the truth. Do your own research!"
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score >= 0.60, f"manipulation={result.manipulation.score}"
+
+    def test_science_denial_complete_pt(self):
+        """Texto de negação científica completo em PT."""
+        text = (
+            "NASA admitiu que a Terra é plana! Os cientistas mentem e "
+            "os dados foram manipulados. O consenso científico é falso, "
+            "é tudo farsa para controlar a população."
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score >= 0.60, f"manipulation={result.manipulation.score}"
+
+    def test_health_misinfo_complete_pt(self):
+        """Texto de desinformação de saúde completo em PT."""
+        text = (
+            "Ivermectina cura COVID em 48 horas mas os médicos proibidos "
+            "de falar a verdade. A quimioterapia é veneno, a cura do câncer "
+            "é escondida pela indústria farmacêutica para lucrar."
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score >= 0.60, f"manipulation={result.manipulation.score}"
+
+    def test_legitimate_news_stays_low(self):
+        """Uma notícia legítima não deve receber score alto."""
+        text = (
+            "Segundo dados do IBGE divulgados nesta terça-feira, a taxa de "
+            "desemprego no Brasil ficou em 7,4% no trimestre encerrado em "
+            "outubro, uma queda de 0,3 ponto percentual em relação ao "
+            "trimestre anterior. Os números indicam uma recuperação "
+            "gradual do mercado de trabalho brasileiro."
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score < 0.20, f"manipulation={result.manipulation.score}"
+        assert result.urgency.score < 0.20, f"urgency={result.urgency.score}"
+
+    def test_legitimate_science_stays_low(self):
+        """Texto científico legítimo não deve disparar negação científica."""
+        text = (
+            "Researchers at the University of Cambridge published a study "
+            "suggesting that the new treatment may reduce symptoms by 30%. "
+            "However, more clinical trials are needed. The results, while "
+            "promising, should be interpreted with caution."
+        )
+        result = analyze_text(text)
+        assert result.manipulation.score < 0.15, f"manipulation={result.manipulation.score}"

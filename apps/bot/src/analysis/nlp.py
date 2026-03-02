@@ -111,7 +111,7 @@ _URGENCY_RULES: list[_Rule] = [
     _Rule(r'!!+',                                      0.12, "exclamações múltiplas"),
     _Rule(r'\?{2,}',                                   0.08, "interrogações múltiplas"),
     _Rule(r'(?:!!+\??|\?+!+){1,}',                     0.10, "mistura !?"),
-    _Rule(r'\b[A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ]{4,}\b',              0.08, "palavras em CAIXA ALTA"),  # capturado per-match
+    _Rule(r'\b[A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ]{4,}\b',              0.10, "palavras em CAIXA ALTA"),  # capturado per-match; weight↑ 0.08→0.10
 ]
 
 
@@ -228,6 +228,133 @@ _MANIPULATION_RULES: list[_Rule] = [
 
     # ── Agenda oculta / hidden agenda ────────────────────────────────────
     _Rule(r'\b(?:agenda\s+(?:oculta|secreta|globalista)|hidden\s+agenda|great\s+reset)\b', 0.40, "conspiração: agenda oculta"),
+
+    # ══════════════════════════════════════════════════════════════════════
+    # NOVOS PADRÕES — baseados em datasets acadêmicos (LIAR, FakeNewsNet,
+    # CHECKED, NELA-GT, PHEME, FakevsSatire, Garg & Sharma 2022,
+    # Choudhary & Arora 2021, Horne & Adali 2017)
+    # ══════════════════════════════════════════════════════════════════════
+
+    # ── Anti-vacina (PT) — baseado em CHECKED, CoAID, COVID Misinfo ────
+    _Rule(r'\bnão\s+vacin[ea]\b',                                          0.50, "anti-vax: não vacine (PT)"),
+    _Rule(r'\bvacina\s+(?:mata|matou|matando|mata(?:r[aá])?)\b',           0.50, "anti-vax: vacina mata (PT)"),
+    _Rule(r'\bvacina\s+(?:é|são)\s+(?:veneno|tóxica|perigosa|experimental)\b', 0.50, "anti-vax: vacina é veneno (PT)"),
+    _Rule(r'\befeitos?\s+colaterais?\s+(?:escondidos?|ocultos?|graves?|mortais?)\b', 0.45, "anti-vax: efeitos colaterais escondidos (PT)"),
+    _Rule(r'\b(?:ingredientes?\s+tóxicos?|substâncias?\s+tóxicas?)\b',     0.40, "anti-vax: ingredientes tóxicos (PT)"),
+    _Rule(r'\bautismo\b.*\bvacina\b|\bvacina\b.*\bautismo\b',             0.50, "anti-vax: vacina-autismo (PT)"),
+    _Rule(r'\b(?:contém|contem)\s+(?:mercúrio|alumínio|formaldeído|grafeno)\b', 0.40, "anti-vax: substância perigosa (PT)"),
+    _Rule(r'\bcobaias?\b',                                                 0.35, "anti-vax: cobaias (PT)"),
+    _Rule(r'\b(?:vacina|vacinação)\s+(?:apressada|experimental|não\s+testada)\b', 0.40, "anti-vax: vacina não testada (PT)"),
+    _Rule(r'\bmortes?\s+(?:após|depois\s+d[ae]|pós)\s+vacina(?:ção)?\b',   0.45, "anti-vax: mortes pós-vacina (PT)"),
+    _Rule(r'\b(?:recus[ea]|rejeitar?)\s+(?:a\s+)?vacina(?:ção)?\b',        0.30, "anti-vax: recusar vacina (PT)"),
+    _Rule(r'\b(?:imunidade\s+natural|imunizar\s+naturalmente)\b',          0.25, "anti-vax: imunidade natural (PT)"),
+
+    # ── Anti-vacina (EN) ───────────────────────────────────────────────
+    _Rule(r'\bdon\'?t\s+vaccinate\b',                                      0.50, "anti-vax: don't vaccinate (EN)"),
+    _Rule(r'\bvaccine\s+(?:kills?|is\s+killing|deadly|lethal)\b',          0.50, "anti-vax: vaccine kills (EN)"),
+    _Rule(r'\bvaccine\s+(?:is|are)\s+(?:poison|toxic|dangerous|experimental)\b', 0.50, "anti-vax: vaccine is poison (EN)"),
+    _Rule(r'\bhidden\s+side\s+effects?\b',                                0.45, "anti-vax: hidden side effects (EN)"),
+    _Rule(r'\btoxic\s+ingredients?\b',                                     0.40, "anti-vax: toxic ingredients (EN)"),
+    _Rule(r'\bautism\b.*\bvaccine\b|\bvaccine\b.*\bautism\b',             0.50, "anti-vax: vaccine-autism (EN)"),
+    _Rule(r'\b(?:contains?|laced\s+with)\s+(?:mercury|aluminum|formaldehyde|graphene)\b', 0.40, "anti-vax: dangerous substance (EN)"),
+    _Rule(r'\bguinea\s+pigs?\b',                                           0.35, "anti-vax: guinea pigs (EN)"),
+    _Rule(r'\brushed\s+vaccine\b',                                         0.40, "anti-vax: rushed vaccine (EN)"),
+    _Rule(r'\bdeaths?\s+(?:after|following|from)\s+vaccin(?:e|ation)\b',   0.45, "anti-vax: deaths after vaccination (EN)"),
+    _Rule(r'\bnatural\s+immunity\b',                                       0.25, "anti-vax: natural immunity (EN)"),
+
+    # ── Negação Científica (PT) — baseado em FakevsSatire, NELA-GT ─────
+    _Rule(r'\b(?:NASA|OMS|WHO)\s+(?:admitiu|confessou|revelou|confirmou)\b', 0.45, "negação científica: autoridade admitiu (PT)"),
+    _Rule(r'\baquecimento\s+global\s+(?:é|não\s+(?:existe|é\s+real)).*(?:farsa|mentira|fraude|hoax)\b', 0.50, "negação científica: aquecimento global farsa (PT)"),
+    _Rule(r'\bmudança\s+climática\s+(?:é\s+)?(?:natural|não\s+existe|mentira)\b', 0.40, "negação científica: mudança climática (PT)"),
+    _Rule(r'\b(?:ciência|ciencia)\s+(?:é\s+)?(?:mentira|fraude|manipulada|comprada)\b', 0.45, "negação científica: ciência é mentira (PT)"),
+    _Rule(r'\bcientistas?\s+(?:mentem|mentiram|estão\s+mentindo|escondem|são\s+pagos)\b', 0.45, "negação científica: cientistas mentem (PT)"),
+    _Rule(r'\bnunca\s+(?:foi|foram)\s+(?:provado|comprovado|demonstrado)\b', 0.35, "negação científica: nunca provado (PT)"),
+    _Rule(r'\bdados?\s+(?:foram|são|estão)\s+(?:manipulados?|falsificados?|inventados?)\b', 0.40, "negação científica: dados manipulados (PT)"),
+    _Rule(r'\bconsenso\s+científico\s+(?:é\s+)?(?:falso|mentira|comprado|manipulado)\b', 0.45, "negação científica: consenso falso (PT)"),
+    _Rule(r'\b(?:teoria\s+d[ae]\s+evolução|evolucionismo)\s+(?:é\s+)?(?:mentira|fraude|falso)\b', 0.40, "negação científica: evolução falsa (PT)"),
+
+    # ── Negação Científica (EN) ──────────────────────────────────────────
+    _Rule(r'\b(?:NASA|WHO|CDC)\s+(?:admitted|confessed|revealed|confirmed)\b', 0.45, "negação científica: authority admitted (EN)"),
+    _Rule(r'\bglobal\s+warming\s+(?:is\s+(?:a\s+)?)?(?:hoax|lie|fraud|fake|scam)\b', 0.50, "negação científica: global warming hoax (EN)"),
+    _Rule(r'\bclimate\s+change\s+(?:is\s+)?(?:natural|not\s+real|a\s+lie|fake|hoax)\b', 0.40, "negação científica: climate change denial (EN)"),
+    _Rule(r'\bscience\s+(?:is\s+)?(?:a\s+lie|fraud|bought|corrupted|manipulated)\b', 0.45, "negação científica: science is a lie (EN)"),
+    _Rule(r'\bscientists?\s+(?:lie|are\s+lying|are\s+paid|are\s+corrupt|hide)\b', 0.45, "negação científica: scientists lie (EN)"),
+    _Rule(r'\bnever\s+(?:been\s+)?(?:proven|demonstrated|shown)\b',        0.35, "negação científica: never proven (EN)"),
+    _Rule(r'\bdata\s+(?:was|were|is|has\s+been)\s+(?:manipulated|fabricated|falsified|faked)\b', 0.40, "negação científica: data manipulated (EN)"),
+    _Rule(r'\bscientific\s+consensus\s+(?:is\s+)?(?:wrong|false|bought|a\s+lie)\b', 0.45, "negação científica: consensus wrong (EN)"),
+    _Rule(r'\bevolution\s+is\s+(?:just\s+)?(?:a\s+)?(?:theory|lie|false)\b', 0.40, "negação científica: evolution is a theory (EN)"),
+
+    # ── Desinformação de Saúde (PT) — baseado em CoAID, CHECKED ────────
+    _Rule(r'\b(?:ivermectina|cloroquina|hidroxicloroquina)\s+(?:cura|trata|previne|funciona)\b', 0.45, "saúde: medicamento milagroso (PT)"),
+    _Rule(r'\btratamento\s+precoce\b',                                     0.25, "saúde: tratamento precoce (PT)"),
+    _Rule(r'\b(?:remédio|remedio)\s+caseiro\b',                            0.30, "saúde: remédio caseiro (PT)"),
+    _Rule(r'\b(?:chá|suco|óleo)\s+(?:de\s+)?(?:\w+)\s+(?:cura|trata|combate|previne)\b', 0.40, "saúde: chá/suco cura (PT)"),
+    _Rule(r'\bmédicos?\s+(?:proibidos?|impedidos?|censurados?)\s+de\s+(?:falar|revelar|contar)\b', 0.45, "saúde: médicos proibidos de falar (PT)"),
+    _Rule(r'\bprotocolo\s+(?:proibido|censurado|secreto)\b',              0.40, "saúde: protocolo proibido (PT)"),
+    _Rule(r'\bcura\s+d[oe]\s+câncer\s+(?:escondida|oculta|censurada?)\b', 0.50, "saúde: cura do câncer escondida (PT)"),
+    _Rule(r'\bágua\s+com\s+(?:limão|bicarbonato|vinagre)\s+(?:cura|trata|combate)\b', 0.45, "saúde: água com X cura (PT)"),
+    _Rule(r'\b(?:quimioterapia|quimio)\s+(?:é\s+)?(?:veneno|mata|perigosa)\b', 0.45, "saúde: quimioterapia é veneno (PT)"),
+    _Rule(r'\bnão\s+existe\s+(?:vírus|virus|pandemia|covid|doença)\b',    0.50, "saúde: negacionismo de doença (PT)"),
+    _Rule(r'\bgripe\s+(?:comum|normal|simples)\b.*\bcovid\b|\bcovid\b.*\bgripe\s+(?:comum|normal|simples)\b', 0.40, "saúde: covid é gripe (PT)"),
+    _Rule(r'\bdesintoxica[rç]?\b',                                         0.20, "saúde: desintoxicar (PT)"),
+
+    # ── Desinformação de Saúde (EN) ──────────────────────────────────────
+    _Rule(r'\b(?:ivermectin|chloroquine|hydroxychloroquine)\s+(?:cures?|treats?|prevents?|works?)\b', 0.45, "saúde: miracle drug (EN)"),
+    _Rule(r'\bhome\s+remed(?:y|ies)\b',                                    0.30, "saúde: home remedy (EN)"),
+    _Rule(r'\b(?:tea|juice|oil)\s+(?:that\s+)?(?:cures?|treats?|fights?|prevents?)\b', 0.40, "saúde: tea/juice cures (EN)"),
+    _Rule(r'\bdoctors?\s+(?:banned|silenced|censored)\s+from\s+(?:speaking|telling)\b', 0.45, "saúde: doctors banned (EN)"),
+    _Rule(r'\b(?:banned|forbidden|censored)\s+(?:treatment|protocol|cure)\b', 0.40, "saúde: banned treatment (EN)"),
+    _Rule(r'\bcancer\s+cure\s+(?:hidden|suppressed|covered\s+up)\b',      0.50, "saúde: cancer cure hidden (EN)"),
+    _Rule(r'\b(?:lemon\s+water|baking\s+soda|apple\s+cider)\s+(?:cures?|treats?)\b', 0.45, "saúde: lemon water cures (EN)"),
+    _Rule(r'\b(?:chemotherapy|chemo)\s+(?:is\s+)?(?:poison|kills?|dangerous)\b', 0.45, "saúde: chemo is poison (EN)"),
+    _Rule(r'\b(?:virus|pandemic|covid)\s+(?:doesn\'?t|does\s+not|don\'?t)\s+exist\b', 0.50, "saúde: disease denial (EN)"),
+    _Rule(r'\bcovid\s+(?:is\s+)?(?:just\s+)?(?:a\s+)?(?:flu|cold|hoax)\b', 0.40, "saúde: covid is flu (EN)"),
+    _Rule(r'\bdetox\b',                                                    0.20, "saúde: detox (EN)"),
+
+    # ── Apelo Emocional Infantil (PT + EN) — baseado em FakevsSatire ─
+    _Rule(r'\bproteja\s+(?:seus?\s+)?(?:filhos?|crianças?|bebês?)\b',     0.30, "emocional: proteja seus filhos (PT)"),
+    _Rule(r'\bprotect\s+(?:your\s+)?(?:children|kids?|babies?)\b',        0.30, "emocional: protect your children (EN)"),
+    _Rule(r'\bcrianças?\s+(?:estão|vão)\s+(?:morrendo|morrer|sofrendo)\b', 0.40, "emocional: crianças morrendo (PT)"),
+    _Rule(r'\bchildren\s+are\s+(?:dying|suffering|being\s+killed)\b',     0.40, "emocional: children are dying (EN)"),
+    _Rule(r'\b(?:envenenando|intoxicando)\s+(?:as\s+)?(?:crianças|nossos?\s+filhos?)\b', 0.45, "emocional: envenenando crianças (PT)"),
+    _Rule(r'\bpoisoning\s+(?:the\s+|our\s+)?(?:children|kids)\b',        0.45, "emocional: poisoning children (EN)"),
+    _Rule(r'\bpense\s+n[oa]s?\s+(?:seus?\s+)?(?:filhos?|crianças?)\b',   0.30, "emocional: pense nos filhos (PT)"),
+    _Rule(r'\bthink\s+(?:of|about)\s+(?:your\s+)?(?:children|kids)\b',   0.30, "emocional: think of your children (EN)"),
+
+    # ── Atribuição Vaga de Fontes (PT) — baseado em LIAR, Emergent ────
+    _Rule(r'\b(?:dizem\s+(?:que|por\s+aí)|andam\s+dizendo)\b',           0.25, "fonte vaga: dizem que (PT)"),
+    _Rule(r'\b(?:li\s+na\s+internet|vi\s+no\s+(?:Facebook|WhatsApp|Instagram|Telegram|YouTube))\b', 0.30, "fonte vaga: li na internet (PT)"),
+    _Rule(r'\bum\s+(?:amigo|conhecido)\s+(?:médico|enfermeiro|cientista)\s+(?:disse|falou|contou)\b', 0.30, "fonte vaga: amigo médico disse (PT)"),
+    _Rule(r'\bfonte\s+(?:confiável|segura|de\s+confiança)\s+(?:disse|revelou|informou)\b', 0.25, "fonte vaga: fonte confiável disse (PT)"),
+    _Rule(r'\btodo\s+mundo\s+sabe\b',                                     0.25, "fonte vaga: todo mundo sabe (PT)"),
+    _Rule(r'\bé\s+de\s+conhecimento\s+público\b',                        0.20, "fonte vaga: conhecimento público (PT)"),
+    _Rule(r'\b(?:pesquisem?|busquem?|procurem?)\s+(?:vocês?\s+mesmos?|por\s+conta\s+própria)\b', 0.35, "fonte vaga: pesquisem vocês mesmos (PT)"),
+    _Rule(r'\binformação\s+(?:censurada|proibida|banida|bloqueada)\b',    0.30, "fonte vaga: informação censurada (PT)"),
+
+    # ── Atribuição Vaga de Fontes (EN) ──────────────────────────────────
+    _Rule(r'\b(?:they\s+say|people\s+say|some\s+say|many\s+say)\b',      0.25, "fonte vaga: they say (EN)"),
+    _Rule(r'\b(?:I\s+(?:saw|read|found)\s+(?:on|in)\s+(?:Facebook|WhatsApp|Instagram|Telegram|YouTube))\b', 0.30, "fonte vaga: I saw on social media (EN)"),
+    _Rule(r'\ba\s+(?:doctor|nurse|scientist)\s+(?:friend|I\s+know)\s+(?:said|told)\b', 0.30, "fonte vaga: a doctor friend said (EN)"),
+    _Rule(r'\ba\s+reliable\s+source\s+(?:said|told|confirmed)\b',        0.25, "fonte vaga: reliable source said (EN)"),
+    _Rule(r'\beverybody\s+knows\b',                                       0.25, "fonte vaga: everybody knows (EN)"),
+    _Rule(r'\b(?:do\s+your\s+own\s+research|DYOR)\b',                    0.35, "fonte vaga: do your own research (EN)"),
+    _Rule(r'\b(?:censored|banned|suppressed)\s+information\b',            0.30, "fonte vaga: censored information (EN)"),
+
+    # ── Manipulação Financeira / Golpe (PT + EN) — baseado em PHEME ──
+    _Rule(r'\b(?:ganhe|ganhar)\s+dinheiro\s+(?:fácil|rápido|sem\s+trabalhar)\b', 0.40, "golpe: dinheiro fácil (PT)"),
+    _Rule(r'\brenda\s+extra\s+(?:garantida|fácil|sem\s+risco)\b',        0.35, "golpe: renda extra garantida (PT)"),
+    _Rule(r'\bmake\s+(?:easy|quick|fast)\s+money\b',                     0.40, "golpe: easy money (EN)"),
+    _Rule(r'\bguaranteed\s+(?:income|return|profit)\b',                   0.35, "golpe: guaranteed income (EN)"),
+    _Rule(r'\b(?:esquema|pirâmide|piramide)\b',                           0.40, "golpe: esquema/pirâmide (PT)"),
+    _Rule(r'\b(?:pyramid|ponzi)\s+scheme\b',                              0.40, "golpe: pyramid scheme (EN)"),
+    _Rule(r'\bclique\s+(?:no|neste|nesse)\s+link\b',                     0.25, "golpe: clique no link (PT)"),
+    _Rule(r'\bclick\s+(?:this|the)\s+link\b',                            0.25, "golpe: click the link (EN)"),
+    _Rule(r'\binvista\s+agora\s+antes\b',                                0.35, "golpe: invista agora (PT)"),
+    _Rule(r'\binvest\s+now\s+before\b',                                  0.35, "golpe: invest now (EN)"),
+
+    # ── Padrões estilísticos de fake news — baseado em Horne & Adali 2017 ─
+    _Rule(r'\b(?:URGENTE|ATENÇÃO|ALERTA|CUIDADO|BOMBA|BREAKING|ALERT)\s*[!:]+', 0.35, "estilo fake: palavra-chave + pontuação"),
+    _Rule(r'(?:^|\n)\s*[A-ZÁÉÍÓÚ][A-ZÁÉÍÓÚ\s]{10,}(?:!|\?|$)',         0.30, "estilo fake: título em CAPS"),
 ]
 
 
@@ -261,6 +388,24 @@ def _detect_language(text: str) -> str:
 
 
 # ── Motor de pontuação ────────────────────────────────────────────────────────
+
+# ── Hedging markers — baseado em Garg & Sharma 2022, Choudhary & Arora 2021 ──
+# Textos legítimos usam hedging; fake news faz afirmações categóricas.
+_HEDGING_MARKERS: set[str] = {
+    # PT
+    "pode", "poderia", "poderiam", "poderá", "talvez", "provavelmente",
+    "possivelmente", "sugere", "indica", "aparentemente", "supostamente",
+    "parece", "segundo", "alegadamente", "hipoteticamente", "eventualmente",
+    # EN
+    "may", "might", "could", "possibly", "probably", "perhaps",
+    "suggests", "indicates", "apparently", "seemingly", "allegedly",
+    "reportedly", "hypothetically", "potentially", "likely",
+    # ES
+    "quizás", "posiblemente", "probablemente", "aparentemente",
+    # FR
+    "peut-être", "possiblement", "probablement", "apparemment",
+}
+
 
 def _apply_rules(text: str, rules: list[_Rule]) -> tuple[float, list[str]]:
     """Aplica lista de regras ao texto e retorna (score capped, evidências)."""
@@ -321,13 +466,34 @@ def analyze_text(text: str) -> NLPResult:
     c_score, c_evidence = _apply_rules(text, _CLAIM_RULES)
     m_score, m_evidence = _apply_rules(text, _MANIPULATION_RULES)
 
-    # CAPS ratio reforça urgência: > 20% de palavras em maiúsculas → +0.15
+    # CAPS ratio reforça urgência — thresholds adaptativos (Horne & Adali 2017)
+    if caps > 0.10:
+        u_score = min(u_score + 0.10, 1.0)
+        u_evidence.append(f"CAPS elevado ({caps:.0%} das palavras)")
     if caps > 0.20:
-        u_score = min(u_score + 0.15, 1.0)
-        u_evidence.append(f"CAPS excessivo ({caps:.0%} das palavras)")
+        u_score = min(u_score + 0.05, 1.0)  # cumulative: +0.15 total at >20%
+        m_score = min(m_score + 0.08, 1.0)
+        m_evidence.append(f"CAPS alto ({caps:.0%})")
     if caps > 0.40:
         m_score = min(m_score + 0.10, 1.0)
         m_evidence.append(f"CAPS muito alto ({caps:.0%})")
+
+    # ── Hedging analysis (Garg & Sharma 2022, Choudhary & Arora 2021) ────
+    # Textos legítimos usam hedging; fake news faz afirmações categóricas.
+    text_words = set(re.findall(r'\b[a-záéíóúàâêôãõüçñ]+\b', text.lower()))
+    hedging_found = text_words & _HEDGING_MARKERS
+    has_claims = c_score > 0.25
+    has_manipulation = m_score > 0.15
+
+    if has_claims and not hedging_found and has_manipulation:
+        # No hedging + claims + manipulation = stronger fake signal
+        m_score = min(m_score + 0.10, 1.0)
+        m_evidence.append("sem hedging em texto com afirmações (sinal forte)")
+    elif hedging_found and len(hedging_found) >= 2:
+        # Multiple hedging markers = more nuanced text, slightly reduce manipulation
+        m_score = max(m_score - 0.05, 0.0)
+        if m_evidence:
+            m_evidence.append(f"hedging presente ({', '.join(list(hedging_found)[:3])})")
 
     return NLPResult(
         text=text[:500],  # armazenar somente o início para evitar Redis bloat

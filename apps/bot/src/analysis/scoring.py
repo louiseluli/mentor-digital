@@ -256,8 +256,8 @@ def compute_risk_score(analysis: dict) -> dict:
         elif verdict == "mixed":
             overall = max(overall, 0.40)
     else:
-        # Sem FC: sinal linguístico + claim penalty + cobertura
-        overall = linguistic * 0.55 + claim_penalty * 0.15 + (1 - coverage * 0.30) * 0.30
+        # Sem FC: sinal linguístico mais pesado + claim penalty + cobertura
+        overall = linguistic * 0.60 + claim_penalty * 0.15 + (1 - coverage) * 0.25
 
         # Floors: when manipulation is detected, don't let score drop too low
         # These catch the case where a text uses conspiracy language but has
@@ -270,6 +270,10 @@ def compute_risk_score(analysis: dict) -> dict:
         # Combined signal boost: urgency + manipulation together = stronger signal
         if urgency_score >= 0.20 and manip_score >= 0.20:
             overall = max(overall, 0.45)
+
+        # Triple signal boost: urgency + manipulation + claims all present
+        if urgency_score >= 0.15 and manip_score >= 0.20 and claim_score >= 0.20:
+            overall = max(overall, 0.50)
 
     overall = max(0.0, min(1.0, overall))
     confidence = min(1.0, 0.30 + (0.40 if has_fc else 0.0) + coverage * 0.30)
