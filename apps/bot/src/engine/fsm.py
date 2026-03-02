@@ -109,7 +109,47 @@ class QuestioningFSM:
         self._update_context(matched)
         next_state = matched.get("next_state", "end")
         self.state = next_state
+
+        # Risk-aware feedback_share: stronger nudge for high/critical content
+        if next_state == "feedback_share":
+            return self._build_risk_aware_share_response()
+
         return self._build_response(next_state)
+
+    def _build_risk_aware_share_response(self) -> dict:
+        """Adapta a resposta de feedback_share ao nível de risco NLP detectado."""
+        manip = 0.0
+        urgency = 0.0
+        if self.nlp_data:
+            manip = self.nlp_data.get("manipulation", {}).get("score", 0.0)
+            urgency = self.nlp_data.get("urgency", {}).get("score", 0.0)
+
+        if manip >= 0.50 or urgency >= 0.50:
+            # High/Critical risk — strong nudge
+            msg = (
+                "Entendo sua decisão. Antes de compartilhar, que tal dar uma olhada "
+                "na análise completa? Encontramos sinais que merecem atenção — "
+                "verificar protege quem você ama. 💛"
+            )
+        elif manip >= 0.25 or urgency >= 0.25:
+            # Moderate risk — gentle nudge
+            msg = (
+                "Tudo bem! Encontramos alguns sinais que vale a pena conferir. "
+                "Se quiser, nosso espaço de investigação na web tem ferramentas "
+                "para analisar fontes antes de compartilhar."
+            )
+        else:
+            # Low risk — standard response
+            msg = (
+                "Tudo bem! O importante é que você pensou sobre isso antes. "
+                "Se quiser, nosso espaço de investigação na web tem ferramentas "
+                "para analisar fontes."
+            )
+
+        self.state = "end"
+        end_response = self._build_response("end")
+        end_response["messages"].insert(0, {"type": "text", "body": msg})
+        return end_response
 
     def _match_option(self, user_input: str, options: list) -> dict | None:
         normalized = user_input.strip().lower()

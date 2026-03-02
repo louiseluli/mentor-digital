@@ -212,6 +212,17 @@ def _simplify_for_wikipedia(query: str, max_words: int = 4) -> str:
     return " ".join(reordered[:max_words]) if reordered else keywords
 
 
+def _wiki_is_relevant(text: str, query_keywords: set[str], min_overlap: int = 1) -> bool:
+    """Check if a Wikipedia article's text shares at least min_overlap keywords with the query.
+
+    This filters out completely unrelated articles that Wikipedia's search API
+    sometimes returns when queries are short or ambiguous.
+    """
+    text_words = set(re.findall(r'\b[a-záéíóúàâêôãõüçñ]{4,}\b', text.lower()))
+    overlap = query_keywords & text_words
+    return len(overlap) >= min_overlap
+
+
 # ── Analisadores ──────────────────────────────────────────────────────────────
 
 async def _run_fact_check(query: str) -> dict:
@@ -359,6 +370,7 @@ async def _run_wikipedia(query: str) -> dict:
 
     Usa query simplificada (primeiras palavras-chave) para melhorar resultados
     da busca, já que Wikipedia search funciona melhor com termos curtos.
+    Aplica filtro de relevância para descartar artigos sem relação com o texto.
     """
     if not query:
         return {"pt": {"query": query, "results": [], "error": ""}, "en": {"query": query, "results": [], "error": ""}}
@@ -371,12 +383,29 @@ async def _run_wikipedia(query: str) -> dict:
     en_task = asyncio.create_task(search_wikipedia(wiki_query, lang="en"))
     pt_result, en_result = await asyncio.gather(pt_task, en_task, return_exceptions=True)
 
-    return {
-        "pt": pt_result if not isinstance(pt_result, Exception)
-              else {"query": wiki_query, "error": str(pt_result), "results": []},
-        "en": en_result if not isinstance(en_result, Exception)
-              else {"query": wiki_query, "error": str(en_result), "results": []},
-    }
+    pt = (
+        pt_result if not isinstance(pt_result, Exception)
+        else {"query": wiki_query, "error": str(pt_result), "results": []}
+    )
+    en = (
+        en_result if not isinstance(en_result, Exception)
+        else {"query": wiki_query, "error": str(en_result), "results": []}
+    )
+
+    # ── Relevance filter: keep only articles whose extract shares keywords ──
+    # This prevents completely unrelated Wikipedia articles from appearing
+    query_keywords = set(
+        w.lower() for w in re.findall(r'\b[a-záéíóúàâêôãõüçñ]{4,}\b', query.lower())
+    ) - _PT_STOPWORDS
+    if query_keywords:
+        for lang_result in (pt, en):
+            if "results" in lang_result:
+                lang_result["results"] = [
+                    r for r in lang_result["results"]
+                    if _wiki_is_relevant(r.get("extract", "") + " " + r.get("title", ""), query_keywords)
+                ]
+
+    return {"pt": pt, "en": en}
 
 
 async def _run_brazilian_fc(query: str, redis_client=None) -> dict:

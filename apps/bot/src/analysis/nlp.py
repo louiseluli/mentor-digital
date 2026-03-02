@@ -183,11 +183,14 @@ _MANIPULATION_RULES: list[_Rule] = [
     _Rule(r'\b(?:nunca\s+antes\s+(?:visto|revelado|mostrado)|never\s+before\s+(?:seen|revealed))\b', 0.30, "clickbait: exclusividade"),
     _Rule(r'\b(?:segredo\s+(?:revelado|exposto|oculto)|secret\s+(?:revealed?|exposed?|hidden)|secret\s+révélé)\b', 0.35, "clickbait: segredo revelado"),
 
-    # ── Escondendo / ocultando — verbo progressivo (PT/EN) ───────────────
+    # ── Escondendo / ocultando (PT/EN) ────────────────────────────────
     _Rule(r'\b(?:está|estão|estava|estavam)\s+(?:escondendo|ocultando|censurando|encobrindo|mentindo)\b', 0.40, "conspiração: escondendo (PT)"),
+    _Rule(r'\b(?:esconde[mn]?|oculta[mn]?)\s+(?:essa|esta|a|as|essa[s]?)\s+(?:informação|informações|verdade|dados?)\b', 0.40, "conspiração: esconde informação (PT)"),
     _Rule(r'\b(?:is|are|was|were)\s+(?:hiding|concealing|covering\s+up|censoring|suppressing|lying\s+about)\b', 0.40, "conspiração: hiding (EN)"),
     _Rule(r'\bescondendo\s+(?:isso|isto|da\s+população|do\s+povo|de\s+(?:você|nós|todos))\b', 0.45, "conspiração: escondendo da população (PT)"),
     _Rule(r'\b(?:hiding|concealing)\s+(?:this|it|the\s+truth)\s+from\b', 0.45, "conspiração: hiding from public (EN)"),
+    _Rule(r'\btentam?\s+(?:proibir|censurar|esconder|ocultar|impedir)\b', 0.35, "conspiração: tentam proibir (PT)"),
+    _Rule(r'\b(?:trying|attempt(?:ing)?)\s+to\s+(?:ban|censor|hide|suppress|block)\b', 0.35, "conspiração: trying to ban (EN)"),
 
     # ── Ninguém fala / informação suprimida ──────────────────────────────
     _Rule(r'\bninguém\s+(?:fala|mostra|comenta|sabe)\b', 0.35, "conspiração: ninguém fala (PT)"),
@@ -214,9 +217,15 @@ _MANIPULATION_RULES: list[_Rule] = [
 
     # ── Cura milagrosa / negação científica ──────────────────────────────
     _Rule(r'\b(?:cura\s+(?:milagrosa|definitiva|secreta|natural|caseira)|miracle\s+cure|secret\s+(?:cure|remedy))\b', 0.40, "manipulação: cura milagrosa"),
+    _Rule(r'\bcura\s+(?:o|a|os|as)?\s*(?:diabetes|câncer|cancer|aids|hiv|covid|alzheimer|parkinson|autismo)\b', 0.45, "saúde: cura milagrosa de doença (PT)"),
+    _Rule(r'\bcures?\s+(?:diabetes|cancer|aids|hiv|covid|alzheimer|parkinson|autism)\b', 0.45, "saúde: miracle disease cure (EN)"),
+    _Rule(r'\b100\s*%\s*(?:de\s+)?(?:eficácia|eficaz|efetivo|cura|aprovação|effective|efficacy|cure\s+rate)\b', 0.45, "saúde: eficácia absoluta (100%)"),
     _Rule(r'\b(?:médicos?\s+não\s+(?:querem|vão)\s+(?:te\s+)?(?:contar|dizer|revelar)|doctors?\s+(?:don\'?t|won\'?t)\s+(?:tell|want\s+you\s+to\s+know))\b', 0.45, "conspiração: médicos não contam"),
-    _Rule(r'\b(?:a\s+indústria\s+(?:farmacêutica|alimentar|da\s+saúde)|big\s+pharma|big\s+(?:food|tech|oil))\b', 0.30, "conspiração: indústria/big pharma"),
+    _Rule(r'\b(?:a\s+indústria\s+(?:farmacêutica|alimentar|da\s+saúde)|big\s+pharma)\b', 0.30, "conspiração: indústria farmacêutica"),
+    _Rule(r'\bbig\s+tech\b', 0.30, "conspiração: big tech"),
+    _Rule(r'\bbig\s+(?:food|oil|ag)\b', 0.30, "conspiração: big corp"),
     _Rule(r'\b(?:para\s+(?:vender|lucrar|ganhar\s+dinheiro)|to\s+(?:sell|profit|make\s+money))\b', 0.25, "conspiração: motivo de lucro"),
+    _Rule(r'\b(?:perderia|perderiam|perdendo|perder)\s+(?:bilhões|milhões|billions?|millions?)\b', 0.30, "conspiração: perder bilhões"),
 
     # ── Obrigar / forçar a população ─────────────────────────────────────
     _Rule(r'\b(?:obrigar\s+(?:todos|a\s+população)|forçar\s+(?:todos|as\s+pessoas|o\s+povo))\b', 0.30, "ameaça: obrigar todos (PT)"),
@@ -349,8 +358,16 @@ _MANIPULATION_RULES: list[_Rule] = [
     _Rule(r'\b(?:pyramid|ponzi)\s+scheme\b',                              0.40, "golpe: pyramid scheme (EN)"),
     _Rule(r'\bclique\s+(?:no|neste|nesse)\s+link\b',                     0.25, "golpe: clique no link (PT)"),
     _Rule(r'\bclick\s+(?:this|the)\s+link\b',                            0.25, "golpe: click the link (EN)"),
+    _Rule(r'\bcompre\s+agora\b',                                         0.35, "golpe: compre agora (PT)"),
+    _Rule(r'\bbuy\s+(?:now|today|immediately)\b',                        0.35, "golpe: buy now (EN)"),
+    _Rule(r'\blink\s+exclusivo\b',                                       0.30, "golpe: link exclusivo (PT)"),
+    _Rule(r'\bexclusive\s+(?:link|offer|deal)\b',                        0.30, "golpe: exclusive offer (EN)"),
     _Rule(r'\binvista\s+agora\s+antes\b',                                0.35, "golpe: invista agora (PT)"),
     _Rule(r'\binvest\s+now\s+before\b',                                  0.35, "golpe: invest now (EN)"),
+    _Rule(r'\b(?:milhares|milhões)\s+já\s+(?:foram|estão|são)\s+(?:curad[oa]s?|beneficiad[oa]s?)\b', 0.35, "golpe: milhares já curados (PT)"),
+    _Rule(r'\b(?:thousands|millions)\s+(?:have\s+)?(?:already\s+)?(?:been\s+)?(?:cured|healed|saved)\b', 0.35, "golpe: thousands already cured (EN)"),
+    _Rule(r'\bantes\s+que\s+(?:acabe[mn]?|esgote[mn]?|termine[mn]?)\b',  0.30, "golpe: antes que acabe (PT)"),
+    _Rule(r'\bbefore\s+(?:it\'?s?\s+)?(?:gone|sold\s+out|too\s+late)\b', 0.30, "golpe: before it's gone (EN)"),
 
     # ── Padrões estilísticos de fake news — baseado em Horne & Adali 2017 ─
     _Rule(r'\b(?:URGENTE|ATENÇÃO|ALERTA|CUIDADO|BOMBA|BREAKING|ALERT)\s*[!:]+', 0.35, "estilo fake: palavra-chave + pontuação"),
