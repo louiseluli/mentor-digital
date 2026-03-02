@@ -1,12 +1,17 @@
 /**
  * api.ts — cliente para o backend FastAPI do Mentor Digital
  *
- * Usa NEXT_PUBLIC_BOT_API_URL configurado no .env.local.
+ * Server components (fetchAnalysis) use BOT_API_URL at runtime.
+ * Client components use NEXT_PUBLIC_BOT_API_URL (inlined at build time).
  * Fallback para localhost:8000 em desenvolvimento.
  */
 
+// Use 127.0.0.1 (not localhost) to avoid IPv6 resolution issues in Node.js
+// server components — uvicorn binds to 127.0.0.1 by default.
 const BASE_URL =
-  process.env.NEXT_PUBLIC_BOT_API_URL ?? "http://localhost:8000";
+  process.env.BOT_API_URL ??
+  process.env.NEXT_PUBLIC_BOT_API_URL ??
+  "http://127.0.0.1:8000";
 
 // ── NLP ──────────────────────────────────────────────────────────────────────
 
@@ -206,9 +211,10 @@ export interface AnalyticsSummary {
 export async function fetchAnalysis(
   contentId: string
 ): Promise<AnalysisResult | null> {
+  const url = `${BASE_URL}/analysis/${contentId}`;
   try {
-    const res = await fetch(`${BASE_URL}/analysis/${contentId}`, {
-      next: { revalidate: 60 }, // cache por 60s no Next.js
+    const res = await fetch(url, {
+      cache: "no-store",
     });
     if (!res.ok) return null;
     return res.json() as Promise<AnalysisResult>;

@@ -40,8 +40,12 @@ async def search_wikipedia(query: str, lang: str = "pt") -> dict:
 
     base = f"https://{lang}.wikipedia.org"
 
+    headers = {
+        "User-Agent": "MentorDigital/1.0 (https://github.com/louiseluli/mentor-digital; mentor-digital@example.com) httpx/0.27",
+    }
+
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=TIMEOUT, follow_redirects=True, headers=headers) as client:
             # ── 1. Busca por título ──────────────────────────────────────────
             search_resp = await client.get(
                 f"{base}/w/api.php",

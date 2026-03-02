@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MENTOR DIGITAL — Apresentação Técnica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #060c1a;
+      --panel:   #0c1528;
+      --border:  #1a2d4e;
+      --accent:  #00ff88;
+      --accent2: #ffe44d;
+      --danger:  #ff3355;
+      --info:    #40c4ff;
+      --muted:   #4a6070;
+      --text:    #c8dce8;
+      --textdim: #607080;
+      --glow:    0 0 8px #00ff8866, 0 0 24px #00ff8822;
+      --glow-y:  0 0 8px #ffe44d66, 0 0 24px #ffe44d22;
+      --glow-r:  0 0 8px #ff335566, 0 0 20px #ff335522;
+    }
+
+    html, body { width:100%; height:100%; background:var(--bg); color:var(--text); font-family:'Share Tech Mono',monospace; overflow:hidden; user-select:none; }
+
+    /* CRT Scanlines */
+    body::after {
+      content:''; position:fixed; inset:0;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.13) 2px,rgba(0,0,0,0.13) 4px);
+      pointer-events:none; z-index:9999;
+    }
+
+    h1,h2,h3,.vt { font-family:'VT323',monospace; }
+
+    /* ── Deck ── */
+    #deck { position:fixed; inset:0 0 44px 0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+
+    .slide {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:36px 60px 16px;
+      opacity:0; transform:translateX(70px);
+      transition:opacity 0.4s ease, transform 0.4s ease;
+      pointer-events:none;
+    }
+    .slide.active  { opacity:1; transform:translateX(0); pointer-events:all; }
+    .slide.out-left{ opacity:0; transform:translateX(-70px); transition:opacity 0.3s ease,transform 0.3s ease; }
+
+    /* ── Nav bar ── */
+    #nav {
+      position:fixed; bottom:0; left:0; right:0; height:44px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 28px; background:rgba(6,12,26,0.94);
+      border-top:1px solid var(--border); z-index:1000;
+    }
+    #progress-bar { position:fixed; bottom:44px; left:0; height:2px; background:var(--accent); box-shadow:var(--glow); transition:width 0.35s ease; }
+    .nav-btn { background:none; border:1px solid var(--border); color:var(--accent); font-family:'VT323',monospace; font-size:17px; padding:3px 14px; cursor:pointer; transition:all 0.2s; letter-spacing:.05em; }
+    .nav-btn:hover:not(:disabled) { border-color:var(--accent); box-shadow:var(--glow); }
+    .nav-btn:disabled { opacity:.2; cursor:default; }
+    #slide-counter { font-family:'VT323',monospace; font-size:17px; color:var(--muted); letter-spacing:.1em; }
+
+    /* ── Notes overlay ── */
+    #notes-panel {
+      display:none; position:fixed; inset:0 0 44px 0;
+      background:rgba(6,12,26,0.97); z-index:500;
+      align-items:center; justify-content:center; padding:48px;
+    }
+    #notes-panel.open { display:flex; }
+    #notes-content { max-width:700px; }
+    #notes-content h3 { font-family:'VT323',monospace; font-size:32px; color:var(--accent2); margin-bottom:16px; }
+    #notes-content p  { font-size:13px; color:var(--textdim); line-height:1.7; margin-bottom:10px; }
+    #notes-content strong { color:var(--text); }
+    #notes-close { margin-top:20px; }
+
+    /* ── Panel ── */
+    .panel       { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:20px 24px; }
+    .panel-inset { background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:10px 14px; }
+    .slide-inner { width:100%; max-width:980px; display:flex; flex-direction:column; gap:18px; }
+
+    /* ── Typography ── */
+    .section-label { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+    .headline      { font-family:'VT323',monospace; font-size:clamp(52px,8vw,96px); color:var(--accent); text-shadow:var(--glow); line-height:1; letter-spacing:.05em; }
+    .sub-headline  { font-family:'VT323',monospace; font-size:clamp(22px,3.5vw,40px); color:var(--text); letter-spacing:.04em; }
+    .accent { color:var(--accent); } .yellow { color:var(--accent2); } .danger { color:var(--danger); } .info { color:var(--info); }
+    .glow-text { text-shadow:var(--glow); }
+
+    /* ── Tags ── */
+    .tag { display:inline-block; font-size:10px; letter-spacing:.13em; text-transform:uppercase; padding:2px 9px; border-radius:3px; border:1px solid; }
+    .tag-green  { color:var(--accent);  border-color:var(--accent);  background:rgba(0,255,136,.08); }
+    .tag-yellow { color:var(--accent2); border-color:var(--accent2); background:rgba(255,228,77,.08); }
+    .tag-red    { color:var(--danger);  border-color:var(--danger);  background:rgba(255,51,85,.08); }
+    .tag-blue   { color:var(--info);    border-color:var(--info);    background:rgba(64,196,255,.08); }
+
+    /* ── Animations ── */
+    @keyframes blink      { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+    @keyframes glitch     { 0%,100%{clip-path:none;transform:none} 2%{clip-path:polygon(0 10%,100% 10%,100% 20%,0 20%);transform:translateX(-4px)} 4%{clip-path:none;transform:none} 6%{clip-path:polygon(0 60%,100% 60%,100% 70%,0 70%);transform:translateX(4px)} 8%{clip-path:none;transform:none} }
+    @keyframes pulseGlow  { 0%,100%{text-shadow:var(--glow)} 50%{text-shadow:0 0 20px #00ff88aa,0 0 60px #00ff8844} }
+    @keyframes sweepLine  { 0%{top:-5%} 100%{top:110%} }
+    @keyframes fadeUp     { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes barFill    { from{width:0} }
+    @keyframes float      { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    @keyframes typewriter { from{width:0} to{width:100%} }
+    @keyframes shimmer    { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+
+    .blink       { animation:blink 1s step-end infinite; }
+    .glitch      { animation:glitch 6s infinite; }
+    .pulse-glow  { animation:pulseGlow 3s ease-in-out infinite; }
+    .float-anim  { animation:float 4s ease-in-out infinite; }
+
+    .fade-up { opacity:0; animation:fadeUp 0.55s ease forwards; }
+    .fade-up:nth-child(1){animation-delay:.08s} .fade-up:nth-child(2){animation-delay:.2s}
+    .fade-up:nth-child(3){animation-delay:.32s} .fade-up:nth-child(4){animation-delay:.44s}
+    .fade-up:nth-child(5){animation-delay:.56s} .fade-up:nth-child(6){animation-delay:.68s}
+    .fade-up:nth-child(7){animation-delay:.80s}
+
+    /* ── Grids ── */
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:100%; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; width:100%; }
+    .col    { display:flex; flex-direction:column; gap:12px; }
+
+    /* ── Code ── */
+    .code { background:rgba(0,0,0,.5); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:4px; padding:12px 16px; font-size:11.5px; line-height:1.65; color:var(--text); white-space:pre; overflow-x:auto; }
+    .code .kw  { color:var(--info); }   .code .fn  { color:var(--accent); }
+    .code .str { color:var(--accent2); } .code .cm  { color:var(--muted); }
+    .code .num { color:#ff9d5c; }
+
+    /* ── Demo text box ── */
+    .demo-text {
+      background:rgba(0,0,0,.5); border:1px solid var(--accent2); border-radius:6px;
+      padding:14px 18px; font-size:12px; line-height:1.7; color:var(--text);
+      white-space:pre-wrap; position:relative;
+    }
+    .demo-text::before {
+      content:'COLAR ESTE TEXTO'; position:absolute; top:-10px; left:12px;
+      font-size:9px; letter-spacing:.15em; color:var(--accent2);
+      background:var(--bg); padding:0 6px;
+    }
+    .copy-btn {
+      position:absolute; top:8px; right:8px;
+      background:rgba(255,228,77,.1); border:1px solid var(--accent2);
+      color:var(--accent2); font-family:'VT323',monospace; font-size:14px;
+      padding:2px 10px; cursor:pointer; border-radius:3px;
+      transition:all .2s; letter-spacing:.08em;
+    }
+    .copy-btn:hover { background:rgba(255,228,77,.2); }
+    .copy-btn.copied { color:var(--accent); border-color:var(--accent); background:rgba(0,255,136,.1); }
+
+    /* ── Meter bars ── */
+    .meter-row   { display:flex; align-items:center; gap:10px; font-size:13px; }
+    .meter-label { width:120px; color:var(--muted); flex-shrink:0; font-size:11px; }
+    .meter-track { flex:1; height:11px; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:2px; overflow:hidden; }
+    .meter-fill  { height:100%; border-radius:2px; animation:barFill 1.2s ease forwards; }
+    .meter-fill.green  { background:var(--accent);  box-shadow:var(--glow); }
+    .meter-fill.yellow { background:var(--accent2); box-shadow:var(--glow-y); }
+    .meter-fill.red    { background:var(--danger);  box-shadow:var(--glow-r); }
+    .meter-val   { width:38px; text-align:right; font-size:11px; }
+
+    /* ── Block bar ── */
+    .block-bar { display:flex; gap:3px; }
+    .block { width:17px; height:17px; border-radius:2px; background:rgba(255,255,255,.06); border:1px solid var(--border); }
+    .block.on-g { background:var(--accent);  box-shadow:var(--glow);   border-color:var(--accent); }
+    .block.on-y { background:var(--accent2); box-shadow:var(--glow-y); border-color:var(--accent2); }
+    .block.on-r { background:var(--danger);  box-shadow:var(--glow-r); border-color:var(--danger); }
+
+    /* ── List ── */
+    .list { list-style:none; display:flex; flex-direction:column; gap:7px; }
+    .list li { display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--text); }
+    .list li::before { content:'▸'; color:var(--accent); flex-shrink:0; margin-top:1px; }
+
+    /* ── Verdict stamps ── */
+    .stamp { font-family:'VT323',monospace; font-size:20px; letter-spacing:.13em; padding:5px 18px; border-radius:4px; border:2px solid; display:inline-block; }
+    .stamp-red    { color:var(--danger);  border-color:var(--danger);  background:rgba(255,51,85,.1); }
+    .stamp-yellow { color:var(--accent2); border-color:var(--accent2); background:rgba(255,228,77,.1); }
+    .stamp-green  { color:var(--accent);  border-color:var(--accent);  background:rgba(0,255,136,.1); }
+    .stamp-muted  { color:var(--muted);   border-color:var(--border);  background:rgba(255,255,255,.02); }
+
+    /* ── Source boxes ── */
+    .src-box { padding:10px 13px; border:1px solid var(--border); border-radius:6px; background:var(--panel); font-size:12px; text-align:center; transition:border-color .3s,box-shadow .3s; }
+    .src-box:hover { border-color:var(--accent); box-shadow:var(--glow); }
+    .src-box .st { font-family:'VT323',monospace; font-size:18px; color:var(--accent); }
+    .src-box .sd { color:var(--muted); font-size:10px; margin-top:2px; }
+
+    .arrow { color:var(--muted); font-size:18px; text-align:center; padding:2px 0; }
+    .divider { border:none; border-top:1px solid var(--border); width:100%; }
+
+    /* ── Expected result box ── */
+    .result-box {
+      border-radius:8px; padding:14px 18px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .result-box.critical { border:1px solid var(--danger);  background:rgba(255,51,85,.06); }
+    .result-box.high     { border:1px solid var(--accent2); background:rgba(255,228,77,.06); }
+    .result-box.low      { border:1px solid var(--accent);  background:rgba(0,255,136,.06); }
+    .result-box.nodata   { border:1px solid var(--muted);   background:rgba(255,255,255,.02); }
+    .result-box .rb-title{ font-family:'VT323',monospace; font-size:22px; }
+    .result-box .rb-row  { display:flex; align-items:center; gap:10px; font-size:11px; color:var(--textdim); }
+
+    /* responsive */
+    @media(max-width:720px){
+      .slide{padding:20px 16px 14px;}
+      .headline{font-size:48px;}
+      .grid-2,.grid-3{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Notes overlay ── -->
+<div id="notes-panel">
+  <div id="notes-content">
+    <h3 id="notes-title">NOTAS DO APRESENTADOR</h3>
+    <div id="notes-body"></div>
+    <button class="nav-btn" id="notes-close" onclick="closeNotes()">[ FECHAR — tecla N ]</button>
+  </div>
+</div>
+
+<div id="progress-bar"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     DECK
+════════════════════════════════════════════════════════ -->
+<div id="deck">
+
+<!-- ══ 0 · TÍTULO ═══════════════════════════════════════ -->
+<section class="slide active" data-notes="Diga: 'Bem-vindos à apresentação do Mentor Digital — um sistema que combina NLP, fact-checking e análise de cobertura midiática para ajudar pessoas a identificar desinformação antes de compartilhar.' Aguarde aplausos e comece.">
+  <div class="slide-inner" style="align-items:center;text-align:center;gap:14px;">
+    <p class="section-label">Universidade de Essex · MSc Data Science · 2025</p>
+    <h1 class="headline glitch pulse-glow" style="font-size:clamp(70px,12vw,130px);">
+      MENTOR<br>DIGITAL
+    </h1>
+    <h2 class="sub-headline" style="color:var(--textdim);">
+      Sistema Inteligente de Verificação de Notícias
+    </h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
+      <span class="tag tag-green">FastAPI</span>
+      <span class="tag tag-blue">Next.js 15</span>
+      <span class="tag tag-yellow">Redis</span>
+      <span class="tag tag-green">Google Fact Check</span>
+      <span class="tag tag-red">Anti-Desinformação</span>
+    </div>
+    <p class="vt blink" style="font-size:22px;color:var(--accent2);letter-spacing:.2em;margin-top:12px;">
+      ▸ PRESSIONE QUALQUER TECLA PARA COMEÇAR ◂
+    </p>
+    <p style="font-size:10px;color:var(--muted);margin-top:4px;">← → SETAS &nbsp;|&nbsp; N = NOTAS &nbsp;|&nbsp; R = REINICIAR</p>
+  </div>
+</section>
+
+<!-- ══ 1 · O PROBLEMA ════════════════════════════════════ -->
+<section class="slide" data-notes="Contextualize: o Brasil é um dos países mais afetados por fake news. WhatsApp é o principal vetor — mensagens reencaminhadas sem verificação. O objetivo do Mentor Digital é dar ao utilizador uma ferramenta rápida e acessível para verificar antes de partilhar.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 01 — contexto</p><h2 class="sub-headline">O PROBLEMA: <span class="danger">DESINFORMAÇÃO</span></h2></div>
+    <div class="grid-2" style="margin-top:2px;">
+      <div class="col">
+        <ul class="list">
+          <li class="fade-up">Brasil está entre os países mais afetados por fake news no mundo.</li>
+          <li class="fade-up">WhatsApp e Telegram são os principais vetores de propagação.</li>
+          <li class="fade-up">Notícias falsas se espalham <strong class="danger">6× mais rápido</strong> que as verdadeiras.</li>
+          <li class="fade-up">Agências de fact-check têm capacidade limitada — não cobrem tudo.</li>
+          <li class="fade-up">Utilizador médio não sabe como verificar antes de compartilhar.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <div class="panel fade-up" style="text-align:center;padding:24px;border-color:var(--danger);">
+          <div class="vt" style="font-size:72px;color:var(--danger);text-shadow:var(--glow-r);line-height:1;">73%</div>
+          <p style="font-size:11px;color:var(--muted);margin-top:4px;">dos brasileiros já receberam notícias falsas pelo WhatsApp<br><span style="font-size:10px;">(Reuters Institute Digital News Report, 2023)</span></p>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--accent2);">
+          <p style="font-size:12px;color:var(--accent2);">💡 SOLUÇÃO PROPOSTA</p>
+          <p style="font-size:11.5px;color:var(--textdim);margin-top:6px;">Chatbot + plataforma web que guia o utilizador por uma análise multi-dimensional — linguística, fact-checks e cobertura midiática — antes de partilhar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 2 · ARQUITECTURA ══════════════════════════════════ -->
+<section class="slide" data-notes="Destaque a execução PARALELA das 5 fontes com asyncio.gather — esse é o ponto técnico mais importante de performance. O backend está no Render.com e o frontend no Vercel. Todas as fontes executam simultaneamente, não em sequência.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 02 — arquitectura</p><h2 class="sub-headline">VISÃO GERAL DO <span class="accent">SISTEMA</span></h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="code fade-up"><span class="cm">┌─ UTILIZADOR ──────────────────────┐
+│  WhatsApp · Telegram · Web        │
+│  input: texto livre ou URL        │
+└───────────┬───────────────────────┘
+            ↓
+┌─ BACKEND (FastAPI / Render) ──────┐
+│  POST /chat/start                 │
+│  POST /chat/reply/{session_id}    │
+│  GET  /chat/{session_id}/status   │
+└──┬────┬────┬────┬──────┬──────────┘
+   ↓    ↓    ↓    ↓      ↓     asyncio.gather()
+ NLP  FC-PT FC-EN GDELT  Wiki  BR-RSS
+   └────┴────┴────┴──────┴──────────┐
+                                    ↓
+┌─ SCORING ─────────────────────────┐
+│  compute_risk_score() → JSON      │
+└───────────┬───────────────────────┘
+            ↓
+┌─ FRONTEND (Next.js / Vercel) ─────┐
+│  /analise/{content_id}            │
+└───────────────────────────────────┘</span></div>
+      </div>
+      <div class="col">
+        <div class="grid-2" style="gap:8px;">
+          <div class="src-box fade-up"><div class="st">REDIS</div><div class="sd">Sessões FSM · Cache RSS 1h</div></div>
+          <div class="src-box fade-up"><div class="st">GOOGLE FC</div><div class="sd">Fact Check API · PT+EN</div></div>
+          <div class="src-box fade-up"><div class="st">GDELT v2</div><div class="sd">Cobertura midiática global</div></div>
+          <div class="src-box fade-up"><div class="st">WIKIPEDIA</div><div class="sd">Contexto enciclopédico</div></div>
+          <div class="src-box fade-up" style="grid-column:span 2;border-color:var(--accent);"><div class="st">AOS FATOS · AGÊNCIA LUPA</div><div class="sd">Verificadores brasileiros — RSS directo</div></div>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--accent2);font-size:11.5px;">
+          <span class="yellow">⚡ Execução paralela via asyncio.gather()</span>
+          <p style="color:var(--muted);margin-top:4px;">p95 &lt; 4 s por análise completa</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 3 · BACKEND ═══════════════════════════════════════ -->
+<section class="slide" data-notes="Explique a estrutura de módulos: cada fonte de dados tem o seu próprio arquivo em analysis/. O Dockerfile usa multi-stage build para manter a imagem pequena — sem pip nem setuptools no container final. O Railway.toml existe no repo mas o backend está no Render (confusão inicial resolvida em produção).">
+  <div class="slide-inner">
+    <div><p class="section-label">// 03 — backend</p><h2 class="sub-headline">BACKEND: <span class="accent">FastAPI</span> + Python 3.12</h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="code fade-up">apps/bot/src/
+├── <span class="fn">main.py</span>              <span class="cm"># Rotas + FSM chat</span>
+├── analysis/
+│   ├── <span class="fn">analysis_service.py</span>  <span class="cm"># Orquestrador async</span>
+│   ├── <span class="fn">nlp_analysis.py</span>      <span class="cm"># spaCy + urgência</span>
+│   ├── <span class="fn">fact_check.py</span>        <span class="cm"># Google FC API</span>
+│   ├── <span class="fn">gdelt.py</span>             <span class="cm"># GDELT v2</span>
+│   ├── <span class="fn">wikipedia.py</span>         <span class="cm"># Wiki API PT+EN</span>
+│   ├── <span class="fn">brazilian_fc.py</span>      <span class="cm"># RSS Aos Fatos/Lupa</span>
+│   └── <span class="fn">scoring.py</span>           <span class="cm"># Score multi-dim</span>
+└── chat/
+    ├── <span class="fn">session.py</span>           <span class="cm"># Estado no Redis</span>
+    └── flows/
+        └── <span class="fn">main_flow.yaml</span>   <span class="cm"># Estados FSM</span></div>
+        <div class="panel fade-up" style="font-size:11px;">
+          <p class="accent" style="margin-bottom:6px;">Dockerfile multi-stage</p>
+          <div class="code" style="border:none;padding:0;font-size:10.5px;"><span class="kw">FROM</span> python:3.12-slim <span class="kw">AS</span> builder
+RUN pip install --prefix=/install -r requirements-prod.txt
+
+<span class="kw">FROM</span> python:3.12-slim        <span class="cm"># sem pip no runtime</span>
+COPY --from=builder /install /usr/local
+CMD [<span class="str">"sh"</span>, <span class="str">"-c"</span>, <span class="str">"uvicorn src.main:app --port ${PORT}"</span>]</div>
+        </div>
+      </div>
+      <div class="col">
+        <ul class="list fade-up" style="font-size:12px;">
+          <li><strong class="accent">Rate limiting</strong> — slowapi 5 req/min por IP</li>
+          <li><strong class="accent">CORS</strong> configurado para Vercel + localhost</li>
+          <li><strong class="accent">Health check</strong> em <code style="color:var(--accent2);">GET /health</code></li>
+          <li><strong class="accent">$PORT</strong> injectado automaticamente pelo Render</li>
+          <li><strong class="accent">Redis add-on</strong> gerenciado no Render</li>
+        </ul>
+        <div class="panel fade-up" style="border-color:var(--info);font-size:11.5px;">
+          <p class="info">🚀 Deploy: Render.com</p>
+          <p style="color:var(--muted);margin-top:4px;">mentor-digital.onrender.com · porta 10000<br>railway.toml presente mas Render detecta Dockerfile automaticamente</p>
+        </div>
+        <div class="panel fade-up" style="font-size:11px;">
+          <p style="color:var(--muted);">Stack de dependências:</p>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">
+            <span class="tag tag-blue">fastapi</span><span class="tag tag-green">uvicorn</span>
+            <span class="tag tag-yellow">redis-py</span><span class="tag tag-blue">httpx</span>
+            <span class="tag tag-green">spacy pt_core</span><span class="tag tag-red">slowapi</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 4 · PIPELINE ══════════════════════════════════════ -->
+<section class="slide" data-notes="Ponto chave: as 5 fontes rodam em paralelo — não em sequência. NLP é o único módulo totalmente local (sem chamada de API). Google FC é consultado em PT e EN separadamente para maximizar cobertura. GDELT e Wikipedia dão 'contexto' mas não veredito.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 04 — pipeline</p><h2 class="sub-headline">PIPELINE DE <span class="accent">ANÁLISE</span></h2></div>
+    <div class="grid-3" style="margin-top:2px;">
+      <div class="panel fade-up" style="border-color:var(--accent);">
+        <p class="vt" style="font-size:22px;color:var(--accent);">① NLP LOCAL</p>
+        <ul class="list" style="margin-top:8px;font-size:11.5px;">
+          <li>spaCy pt_core_news_sm</li>
+          <li>Índice de urgência (0–1)</li>
+          <li>Score de manipulação</li>
+          <li>Razão de MAIÚSCULAS</li>
+          <li>Entidades nomeadas</li>
+        </ul>
+      </div>
+      <div class="panel fade-up" style="border-color:var(--info);">
+        <p class="vt" style="font-size:22px;color:var(--info);">② FACT-CHECK</p>
+        <ul class="list" style="margin-top:8px;font-size:11.5px;">
+          <li>Google FC API (PT + EN)</li>
+          <li>Busca paralela em 2 idiomas</li>
+          <li>rating_value 1–7</li>
+          <li>Fallback: text_rating parse</li>
+          <li>Lupa, Fatos, UOL, Boatos…</li>
+        </ul>
+      </div>
+      <div class="panel fade-up" style="border-color:var(--accent2);">
+        <p class="vt" style="font-size:22px;color:var(--accent2);">③ COBERTURA</p>
+        <ul class="list" style="margin-top:8px;font-size:11.5px;">
+          <li>GDELT v2 (até 20 artigos)</li>
+          <li>Wikipedia PT + EN</li>
+          <li>Aos Fatos RSS feed</li>
+          <li>Agência Lupa RSS feed</li>
+          <li>Cache Redis TTL 1h</li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel fade-up" style="font-size:11px;">
+      <div class="code" style="border:none;padding:0;font-size:11px;"><span class="cm"># analysis_service.py</span>
+results = <span class="kw">await</span> asyncio.<span class="fn">gather</span>(
+    <span class="fn">_run_nlp</span>(text), <span class="fn">_run_fc</span>(text, <span class="str">"pt"</span>), <span class="fn">_run_fc</span>(text, <span class="str">"en"</span>),
+    <span class="fn">_run_gdelt</span>(text), <span class="fn">_run_wikipedia</span>(text), <span class="fn">_run_brazilian_fc</span>(text)
+)  <span class="cm"># ← tudo em paralelo, não em sequência</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 5 · PONTUAÇÃO ═════════════════════════════════════ -->
+<section class="slide" data-notes="A fórmula muda conforme há ou não fact-checks disponíveis. Com FC: peso 65% no sinal de fact-check. Sem FC: o NLP tem peso 70% — mais incerteza, confiança menor. A confiança é separada do score de risco — importante explicar essa distinção.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 05 — scoring</p><h2 class="sub-headline">PONTUAÇÃO DE <span class="danger">RISCO</span> MULTI-DIMENSIONAL</h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="panel fade-up" style="border-color:var(--accent);">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">COM FACT-CHECKS DISPONÍVEIS</p>
+          <div class="code" style="border:none;padding:0;font-size:13px;"><span class="fn">overall</span> = linguistic × <span class="num">0.25</span>
+         + fc_signal × <span class="num">0.65</span>
+         + (1 − coverage) × <span class="num">0.10</span></div>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--muted);">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">SEM FACT-CHECKS (só NLP)</p>
+          <div class="code" style="border:none;padding:0;font-size:13px;"><span class="fn">overall</span> = linguistic × <span class="num">0.70</span>
+         + (1 − coverage×0.30) × <span class="num">0.30</span></div>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--accent2);">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:6px;">CONFIANÇA DA ANÁLISE (0–1)</p>
+          <div class="code" style="border:none;padding:0;font-size:12px;"><span class="fn">confidence</span> = 0.30
+  + (0.40 <span class="kw">if</span> fc_data <span class="kw">else</span> 0)
+  + coverage × 0.30</div>
+        </div>
+      </div>
+      <div class="col">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Tabela Google FC <code style="color:var(--accent2);">rating_value</code>:</p>
+        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;font-size:12px;margin-bottom:14px;">
+          <span class="danger">1–2</span><span style="color:var(--textdim);">Falso</span><span class="danger">→ 1.00</span>
+          <span class="yellow">3–4</span><span style="color:var(--textdim);">Misto/Enganoso</span><span class="yellow">→ 0.65</span>
+          <span class="accent">5–7</span><span style="color:var(--textdim);">Verdadeiro</span><span class="accent">→ 0.10</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">SIMULAÇÃO — notícia verificada como falsa:</p>
+        <div class="fade-up" style="display:flex;flex-direction:column;gap:9px;">
+          <div class="meter-row"><span class="meter-label">Linguística</span><div class="meter-track"><div class="meter-fill yellow" style="width:72%"></div></div><span class="meter-val yellow">0.72</span></div>
+          <div class="meter-row"><span class="meter-label">Fact-checks</span><div class="meter-track"><div class="meter-fill red" style="width:92%"></div></div><span class="meter-val danger">0.92</span></div>
+          <div class="meter-row"><span class="meter-label">Cobertura</span><div class="meter-track"><div class="meter-fill green" style="width:55%"></div></div><span class="meter-val accent">0.55</span></div>
+          <hr class="divider" style="margin:2px 0"/>
+          <div class="meter-row"><span class="meter-label" style="color:var(--text);">GERAL</span><div class="meter-track"><div class="meter-fill red" style="width:82%"></div></div><span class="meter-val danger">0.82</span></div>
+          <div style="display:flex;gap:8px;margin-top:2px;flex-wrap:wrap;">
+            <span class="stamp stamp-red">CRÍTICO</span>
+            <span class="stamp stamp-red" style="font-size:15px;">FALSO VERIFICADO</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 6 · BUG rating_value=0 ═══════════════════════════ -->
+<section class="slide" data-notes="Este é o bug mais interessante — a Google FC API oficialmente documenta rating_value mas na prática devolve 0 em muitos casos, colocando o veredito apenas em text_rating. O fix foi: verificar 'misto' ANTES de 'falso' para evitar que 'enganoso' seja classificado como 'falso'. A mesma lógica foi replicada no frontend (TypeScript).">
+  <div class="slide-inner">
+    <div><p class="section-label">// 06 — bug report</p><h2 class="sub-headline">BUG: Google FC <span class="danger">rating_value = 0</span></h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="panel fade-up" style="border-color:var(--danger);">
+          <p style="font-size:10px;color:var(--danger);margin-bottom:8px;">⚠ SINTOMAS EM PRODUÇÃO</p>
+          <ul class="list" style="font-size:11.5px;">
+            <li>6 fact-checks encontrados → "SEM DADOS FC"</li>
+            <li>Stamps "SEM VEREDITO" no Quest Log</li>
+            <li>Score calculado só por NLP (peso 70%)</li>
+            <li>Confiança 0.30 em vez de 0.70+</li>
+          </ul>
+        </div>
+        <div class="panel fade-up">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">CAUSA RAIZ</p>
+          <div class="code" style="font-size:10.5px;border:none;padding:0;"><span class="cm"># API devolve:</span>
+{ <span class="str">"rating_value"</span>: <span class="num">0</span>, <span class="str">"text_rating"</span>: <span class="str">"Falso"</span> }
+
+<span class="cm"># Código original (BUG):</span>
+<span class="kw">if</span> rv > <span class="num">0</span>:   <span class="cm"># ← rating_value=0 ignorado!</span>
+    risk_sum += <span class="fn">_rating_to_risk</span>(rv)
+<span class="cm"># ELSE: nada → review_count = 0 → "no_data"</span></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel fade-up" style="border-color:var(--accent);">
+          <p style="font-size:10px;color:var(--accent);margin-bottom:8px;">✅ SOLUÇÃO</p>
+          <div class="code" style="font-size:10.5px;border:none;padding:0;"><span class="kw">def</span> <span class="fn">_text_to_category</span>(text: str):
+    t = text.lower().strip()
+    <span class="cm"># MISTO antes de FALSO!</span>
+    <span class="kw">for</span> term <span class="kw">in</span> _MIXED_TERMS:   <span class="cm"># "enganoso"…</span>
+        <span class="kw">if</span> term <span class="kw">in</span> t: <span class="kw">return</span> <span class="str">"mixed"</span>
+    <span class="kw">for</span> term <span class="kw">in</span> _FALSE_TERMS:   <span class="cm"># "falso"…</span>
+        <span class="kw">if</span> term <span class="kw">in</span> t: <span class="kw">return</span> <span class="str">"false"</span>
+    <span class="kw">for</span> term <span class="kw">in</span> _TRUE_TERMS:
+        <span class="kw">if</span> term <span class="kw">in</span> t: <span class="kw">return</span> <span class="str">"true"</span>
+
+<span class="cm"># No _factcheck_signal():</span>
+<span class="kw">else</span>:  <span class="cm"># rv == 0 → fallback</span>
+    cat = <span class="fn">_text_to_category</span>(
+        review.get(<span class="str">"text_rating"</span>, <span class="str">""</span>))</div>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--accent2);font-size:11.5px;">
+          <p class="yellow">Resultado após o fix:</p>
+          <p style="color:var(--textdim);margin-top:4px;">5 falso · 5 misto → <span class="danger">71% risco CRÍTICO</span></p>
+          <p style="color:var(--muted);font-size:10.5px;margin-top:4px;">Mesma lógica replicada em TypeScript (factcheck-section.tsx)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 7 · CHATBOT FSM ═══════════════════════════════════ -->
+<section class="slide" data-notes="O FSM é definido em YAML — estados, mensagens e transições. Cada canal (web, Telegram, WhatsApp) usa os mesmos endpoints REST. O bug das variáveis {web_platform_url} existia porque a função _collect_web_messages não fazia substituição — corrigido com _substitute_web_vars().">
+  <div class="slide-inner">
+    <div><p class="section-label">// 07 — chatbot</p><h2 class="sub-headline">CHATBOT <span class="accent">FSM</span> — Máquina de Estados</h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="code fade-up" style="font-size:11px;"><span class="cm"># main_flow.yaml (simplificado)</span>
+states:
+  <span class="fn">initial</span>:
+    message: <span class="str">"Olá! Sou o Mentor Digital.\nCole uma notícia para analisarmos."</span>
+    next: <span class="fn">collecting</span>
+
+  <span class="fn">collecting</span>:
+    trigger: <span class="str">user_input</span>
+    action:  <span class="str">analyze_content</span>  <span class="cm"># async</span>
+    next:    <span class="fn">processing</span>
+
+  <span class="fn">processing</span>:
+    message: <span class="str">"Analisando... aguarde."</span>
+    polling: <span class="kw">true</span>     <span class="cm"># GET /status a cada 3s</span>
+    next:    <span class="fn">results</span>
+
+  <span class="fn">results</span>:
+    message: <span class="str">"{risk_summary}\nVer: {web_platform_url}/analise/{content_id}"</span></div>
+        <div class="panel fade-up" style="border-color:var(--danger);font-size:11.5px;">
+          <p class="danger">Bug: {web_platform_url} literal</p>
+          <p style="color:var(--textdim);margin-top:4px;">WhatsApp/Telegram substituíam correctamente; chat web não. Corrigido com <code style="color:var(--accent);">_substitute_web_vars(messages, content_id)</code> em main.py.</p>
+        </div>
+      </div>
+      <div class="col">
+        <ul class="list fade-up" style="font-size:12px;">
+          <li>Estado persistido em <strong class="accent">Redis</strong> (TTL 30 min)</li>
+          <li>Sessão por <code style="color:var(--accent2);">session_id</code> UUID gerado no start</li>
+          <li>Frontend faz polling 3s → <code>GET /status</code> até ready</li>
+          <li>Suporte Web + Telegram + WhatsApp nos mesmos endpoints</li>
+        </ul>
+        <div class="panel fade-up" style="font-size:11px;">
+          <p style="color:var(--muted);margin-bottom:8px;">Endpoints REST:</p>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div><span class="tag tag-green" style="width:52px;text-align:center;display:inline-block;">POST</span>&nbsp; <code style="color:var(--text);">/chat/start</code></div>
+            <div><span class="tag tag-yellow" style="width:52px;text-align:center;display:inline-block;">POST</span>&nbsp; <code style="color:var(--text);">/chat/reply/{session_id}</code></div>
+            <div><span class="tag tag-blue" style="width:52px;text-align:center;display:inline-block;">GET</span>&nbsp;&nbsp; <code style="color:var(--text);">/chat/{session_id}/status</code></div>
+            <div><span class="tag tag-green" style="width:52px;text-align:center;display:inline-block;">GET</span>&nbsp;&nbsp; <code style="color:var(--text);">/health</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 8 · FRONTEND ══════════════════════════════════════ -->
+<section class="slide" data-notes="Tailwind v4 é uma mudança significativa — não mais tailwind.config.js, tudo via @theme inline no CSS. O tema escuro usa DUAS abordagens simultâneas: classe .dark (para Tailwind) e atributo data-theme (para CSS custom properties). O script inline no head previne FOUC.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 08 — frontend</p><h2 class="sub-headline">FRONTEND: <span class="info">Next.js 15</span> + Tailwind <span class="accent">v4</span></h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="code fade-up" style="font-size:11px;">apps/web/
+├── app/
+│   ├── <span class="fn">page.tsx</span>            <span class="cm"># Home + chat embutido</span>
+│   ├── conversa/[id]/
+│   │   └── <span class="fn">page.tsx</span>        <span class="cm"># Chat dedicado</span>
+│   └── analise/[id]/
+│       └── <span class="fn">page.tsx</span>        <span class="cm"># Análise completa</span>
+├── components/
+│   ├── <span class="fn">panel-card.tsx</span>      <span class="cm"># HUD panel wrapper</span>
+│   ├── <span class="fn">risk-meter.tsx</span>      <span class="cm"># 10 blocos arcade</span>
+│   ├── <span class="fn">analysis-header.tsx</span> <span class="cm"># Cabeçalho</span>
+│   ├── <span class="fn">evidence-scale.tsx</span>  <span class="cm"># Barras multi-dim</span>
+│   ├── <span class="fn">factcheck-section.tsx</span><span class="cm"># Quest Log FC</span>
+│   ├── <span class="fn">chat-interface.tsx</span>  <span class="cm"># Bubbles + opções</span>
+│   └── <span class="fn">theme-toggle.tsx</span>    <span class="cm"># Dark/light toggle</span>
+└── app/globals.css         <span class="cm"># Design tokens HUD</span></div>
+      </div>
+      <div class="col">
+        <div class="panel fade-up" style="border-color:var(--accent);">
+          <p class="section-label" style="margin-bottom:8px;">Tailwind v4 — @theme inline</p>
+          <div class="code" style="font-size:10.5px;border:none;padding:0;"><span class="cm">/* globals.css */</span>
+<span class="kw">@theme</span> inline {
+  <span class="fn">--color-hud-accent</span>:  var(--hud-accent);
+  <span class="fn">--color-hud-danger</span>:  var(--hud-danger);
+  <span class="fn">--color-hud-warning</span>: var(--hud-warning);
+  <span class="fn">--color-hud-surface</span>: var(--hud-surface);
+}</div>
+        </div>
+        <ul class="list fade-up" style="font-size:11.5px;">
+          <li>Tema duplo: <code style="color:var(--accent);">.dark</code> (Tailwind) + <code style="color:var(--accent);">data-theme</code> (tokens)</li>
+          <li>Script inline no <code>&lt;head&gt;</code> previne flash de tema errado (FOUC)</li>
+          <li>CRT scanlines via <code>body::after</code> — só no tema escuro</li>
+          <li>VT323 (headings) + Share Tech Mono (UI/código)</li>
+          <li>Layout análise: <code style="color:var(--accent2);">lg:grid-cols-[1fr_1.1fr]</code> — fact-checks sticky</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 9 · DESIGN HUD ════════════════════════════════════ -->
+<section class="slide" data-notes="O design usa tokens CSS mapeados para Tailwind, permitindo que o tema mude apenas trocando os valores das variáveis — sem alterar classes nos componentes. A barra de blocos (RiskMeter) é inspirada na barra de vida de jogos arcade clássicos.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 09 — ui/ux</p><h2 class="sub-headline">DESIGN <span class="accent">HUD</span> — Estética Arcade Retro</h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="panel fade-up">
+          <p class="section-label" style="margin-bottom:10px;">Paleta de cores</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:30px;height:30px;border-radius:3px;background:#00ff88;flex-shrink:0;box-shadow:0 0 10px #00ff8888;"></div>
+              <div><p style="font-size:11.5px;color:var(--accent);">--hud-accent — verde fósforo</p><p style="font-size:9px;color:var(--muted);">Dark: oklch(0.78 0.22 145) · Light: oklch(0.40 0.16 145)</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:30px;height:30px;border-radius:3px;background:#ffe44d;flex-shrink:0;box-shadow:0 0 10px #ffe44d88;"></div>
+              <div><p style="font-size:11.5px;color:var(--accent2);">--hud-warning — amarelo arcade</p><p style="font-size:9px;color:var(--muted);">Dark: oklch(0.85 0.18 80)</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:30px;height:30px;border-radius:3px;background:#ff3355;flex-shrink:0;box-shadow:0 0 10px #ff335588;"></div>
+              <div><p style="font-size:11.5px;color:var(--danger);">--hud-danger — vermelho crítico</p><p style="font-size:9px;color:var(--muted);">Dark: oklch(0.60 0.22 25)</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel fade-up">
+          <p class="section-label" style="margin-bottom:10px;">RiskMeter — 10 blocos arcade</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);"><span style="width:55px;">BAIXO</span><div class="block-bar" id="bar-low"></div><span style="color:var(--accent);">level: low</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);"><span style="width:55px;">MODERADO</span><div class="block-bar" id="bar-mod"></div><span style="color:var(--accent2);">level: moderate</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);"><span style="width:55px;">ALTO</span><div class="block-bar" id="bar-high"></div><span style="color:var(--accent2);">level: high</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);"><span style="width:55px;">CRÍTICO</span><div class="block-bar" id="bar-crit"></div><span style="color:var(--danger);">level: critical</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel fade-up">
+          <p class="section-label" style="margin-bottom:10px;">Stamps de veredito (Quest Log)</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <span class="stamp stamp-red">FALSO VERIFICADO</span>
+            <span class="stamp stamp-yellow">CONTESTADO</span>
+            <span class="stamp stamp-green">VERIFICADO</span>
+            <span class="stamp stamp-muted">SEM DADOS FC</span>
+          </div>
+        </div>
+        <ul class="list fade-up" style="font-size:11.5px;">
+          <li>Quest Log com deduplicação de claims por texto normalizado</li>
+          <li>"+N ocorrências" quando mesma claim aparece em múltiplas fontes</li>
+          <li>Chat: bot = <code style="color:var(--accent);">hud-surface-2</code> · user = <code style="color:var(--accent);">hud-accent</code></li>
+          <li>Botões de opção com prefixo <code style="color:var(--accent2);">▸</code> — estética de menu retro</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 10 · VERIFICADORES BRASILEIROS ══════════════════ -->
+<section class="slide" data-notes="A integração RSS é um diferencial porque a Google FC API indexa com dias de atraso. Para notícias 'quentes' ou virais do momento, o RSS capta primeiro. O matching é simples mas eficaz: pelo menos 2 keywords relevantes no título+snippet do artigo.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 10 — fontes nacionais</p><h2 class="sub-headline">VERIFICADORES <span class="accent">BRASILEIROS</span> — RSS</h2></div>
+    <div class="grid-2">
+      <div class="col">
+        <div class="panel fade-up" style="border-color:var(--accent);">
+          <p class="vt" style="font-size:20px;color:var(--accent);">Por que RSS além da Google FC?</p>
+          <ul class="list" style="font-size:11.5px;margin-top:8px;">
+            <li>Google FC indexa artigos com <strong class="danger">dias de atraso</strong></li>
+            <li>Feeds RSS têm os artigos mais recentes em tempo real</li>
+            <li>Cobre notícias virais antes da indexação</li>
+            <li>Sem custo de API — usa stdlib <code style="color:var(--accent);">xml.etree</code></li>
+          </ul>
+        </div>
+        <div class="panel fade-up">
+          <div class="code" style="font-size:10.5px;border:none;padding:0;">FEEDS = {
+  <span class="str">"Aos Fatos"</span>:    <span class="str">"https://www.aosfatos.org/noticias/feed/"</span>,
+  <span class="str">"Agência Lupa"</span>: <span class="str">"https://agencialupa.com.br/feed/"</span>
+}
+TIMEOUT = <span class="num">8.0</span>  <span class="cm"># segundos</span>
+<span class="cm"># Match: ≥ 2 termos-chave no título+snippet</span>
+<span class="cm"># Cache Redis: TTL 1h</span></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel fade-up">
+          <p class="section-label" style="margin-bottom:8px;">Pipeline de matching</p>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--textdim);">
+            <div class="panel-inset">① Extrair keywords (&gt;3 chars, sem stopwords PT, max 8)</div>
+            <div class="arrow">↓</div>
+            <div class="panel-inset">② Fetch paralelo dos feeds (asyncio.gather, timeout 8s)</div>
+            <div class="arrow">↓</div>
+            <div class="panel-inset">③ Parse XML com ElementTree — título + description</div>
+            <div class="arrow">↓</div>
+            <div class="panel-inset">④ Score por número de keywords encontradas (mín. 2)</div>
+            <div class="arrow">↓</div>
+            <div class="panel-inset">⑤ Top 5 resultados → cache Redis TTL 1h</div>
+          </div>
+        </div>
+        <div class="panel fade-up" style="border-color:var(--accent2);font-size:11px;">
+          <p class="yellow">Nota: Projeto Comprova</p>
+          <p style="color:var(--muted);margin-top:4px;">RSS activo mas apenas 3 artigos de 2019 — descartado por inactividade.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 11 · RESULTADOS ═══════════════════════════════════ -->
+<section class="slide" data-notes="Destaque os 3 bugs corrigidos em produção — mostram que o sistema passou por testes reais. O mais crítico era o rating_value=0 porque silenciosamente tornava todos os fact-checks invisíveis. A análise completa (5 fontes) geralmente retorna em menos de 4 segundos.">
+  <div class="slide-inner">
+    <div><p class="section-label">// 11 — resultados</p><h2 class="sub-headline">RESULTADOS &amp; <span class="accent">MÉTRICAS</span></h2></div>
+    <div class="grid-3">
+      <div class="panel fade-up" style="text-align:center;border-color:var(--accent);">
+        <div class="vt" style="font-size:60px;color:var(--accent);text-shadow:var(--glow);line-height:1;">5</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Fontes de dados<br>em paralelo</p>
+      </div>
+      <div class="panel fade-up" style="text-align:center;border-color:var(--accent2);">
+        <div class="vt" style="font-size:60px;color:var(--accent2);text-shadow:var(--glow-y);line-height:1;">&lt;4s</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">p95 por análise<br>completa</p>
+      </div>
+      <div class="panel fade-up" style="text-align:center;border-color:var(--info);">
+        <div class="vt" style="font-size:60px;color:var(--info);line-height:1;">3</div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;">Bugs críticos<br>resolvidos</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel fade-up" style="font-size:11.5px;">
+        <p class="accent" style="margin-bottom:8px;">Bugs resolvidos em produção:</p>
+        <ul class="list" style="font-size:11px;">
+          <li><span class="danger">rating_value=0</span> — Google FC não retorna score numérico → parsing text_rating como fallback</li>
+          <li><span class="danger">{web_platform_url}</span> — template vars não substituídas no chat web → _substitute_web_vars()</li>
+          <li><span class="danger">Quest Log SEM VEREDITO</span> — frontend sem lógica de fallback → replicada em TypeScript</li>
+        </ul>
+      </div>
+      <div class="panel fade-up" style="border-color:var(--accent);">
+        <p class="accent" style="margin-bottom:8px;">Stack técnico:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          <span class="tag tag-blue">Python 3.12</span><span class="tag tag-green">FastAPI</span>
+          <span class="tag tag-yellow">Redis</span><span class="tag tag-blue">Next.js 15</span>
+          <span class="tag tag-green">Tailwind v4</span><span class="tag tag-red">spaCy</span>
+          <span class="tag tag-blue">Google FC API</span><span class="tag tag-green">GDELT</span>
+          <span class="tag tag-yellow">Render.com</span><span class="tag tag-blue">Docker</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 12 · DEMO — COMO FUNCIONA ════════════════════════ -->
+<section class="slide" data-notes="SLIDE DE TRANSIÇÃO para a demonstração ao vivo. Abra o browser antes de avançar. URL do frontend: verifique na variável de ambiente NEXT_PUBLIC_API_URL. Se o backend demorar no primeiro request, é o cold start do Render (free tier). Aguarde ~30s se necessário.">
+  <div class="slide-inner" style="align-items:center;text-align:center;gap:16px;">
+    <p class="section-label">// 12 — demonstração ao vivo</p>
+    <h2 class="sub-headline" style="color:var(--accent2);">HORA DA <span class="vt" style="font-size:inherit;color:var(--accent);">DEMO</span></h2>
+    <p style="font-size:13px;color:var(--textdim);max-width:560px;">Vamos testar o sistema ao vivo com 3 cenários reais que geram resultados completamente diferentes.</p>
+    <div class="grid-3" style="max-width:680px;">
+      <div class="result-box critical fade-up" style="text-align:left;">
+        <p class="rb-title danger">CENÁRIO 1</p>
+        <p style="font-size:11px;color:var(--textdim);">Fake news verificada</p>
+        <p style="font-size:11px;margin-top:4px;">Esperado: <span class="stamp stamp-red" style="font-size:14px;padding:2px 8px;">CRÍTICO</span></p>
+      </div>
+      <div class="result-box high fade-up" style="text-align:left;">
+        <p class="rb-title yellow">CENÁRIO 2</p>
+        <p style="font-size:11px;color:var(--textdim);">Linguagem manipuladora</p>
+        <p style="font-size:11px;margin-top:4px;">Esperado: <span class="stamp stamp-yellow" style="font-size:14px;padding:2px 8px;">ALTO</span></p>
+      </div>
+      <div class="result-box low fade-up" style="text-align:left;">
+        <p class="rb-title accent">CENÁRIO 3</p>
+        <p style="font-size:11px;color:var(--textdim);">Notícia factual</p>
+        <p style="font-size:11px;margin-top:4px;">Esperado: <span class="stamp stamp-green" style="font-size:14px;padding:2px 8px;">BAIXO</span></p>
+      </div>
+    </div>
+    <div class="panel" style="font-size:12px;max-width:600px;border-color:var(--info);">
+      <p class="info" style="margin-bottom:6px;">⚡ ANTES DE COMEÇAR</p>
+      <p style="color:var(--textdim);">1. Abra o frontend no browser<br>2. Se o backend demorar, aguarde ~30s (cold start Render free tier)<br>3. Use os textos dos próximos slides para copiar e colar</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 13 · DEMO — CENÁRIO 1: CRÍTICO ══════════════════ -->
+<section class="slide" data-notes="Este texto contém uma das fake news mais verificadas do Brasil — vacina com microchip de Bill Gates. A Google FC API vai retornar múltiplos fact-checks com rating 'Falso'. O score linguístico também será alto (maiúsculas, urgência, manipulação). Resultado esperado: CRÍTICO, 70-85%, FALSO VERIFICADO.">
+  <div class="slide-inner">
+    <div>
+      <p class="section-label">// 13 — demo · cenário 1</p>
+      <h2 class="sub-headline">CENÁRIO 1: RESULTADO <span class="danger">CRÍTICO</span></h2>
+    </div>
+    <div style="position:relative;" class="fade-up">
+      <div class="demo-text" id="text-critico">Vacinas da COVID-19 contêm microchips de Bill Gates para controlar e monitorar a população. O próprio Bill Gates admitiu em entrevista que a vacina servirá para implantação de nanotecnologia capaz de rastrear pessoas pelo GPS. COMPARTILHE URGENTE! O GOVERNO QUER ESCONDER ESSA INFORMAÇÃO! Médicos foram silenciados por revelar a verdade sobre os microchips nas vacinas.</div>
+      <button class="copy-btn" onclick="copyText('text-critico', this)">COPIAR</button>
+    </div>
+    <div class="grid-2">
+      <div class="result-box critical fade-up">
+        <p class="rb-title danger">RESULTADO ESPERADO</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <span class="stamp stamp-red">CRÍTICO</span>
+          <span class="stamp stamp-red" style="font-size:15px;">FALSO VERIFICADO</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+          <div class="meter-row"><span class="meter-label">Linguística</span><div class="meter-track"><div class="meter-fill red" style="width:85%"></div></div><span class="meter-val danger">~0.85</span></div>
+          <div class="meter-row"><span class="meter-label">Fact-checks</span><div class="meter-track"><div class="meter-fill red" style="width:90%"></div></div><span class="meter-val danger">~0.90</span></div>
+          <div class="meter-row"><span class="meter-label">Score geral</span><div class="meter-track"><div class="meter-fill red" style="width:78%"></div></div><span class="meter-val danger">~0.78</span></div>
+        </div>
+      </div>
+      <div class="col fade-up">
+        <div class="panel">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">POR QUE ESTE RESULTADO?</p>
+          <ul class="list" style="font-size:11px;">
+            <li>Múltiplos fact-checks com rating "Falso" na Google FC API</li>
+            <li>Alta proporção de MAIÚSCULAS (&gt;20%) → boost linguístico +0.15</li>
+            <li>Palavras de urgência: "URGENTE", "ESCONDER", "silenciados"</li>
+            <li>Floors progressivos: ≥1 Falso → signal ≥ 0.75</li>
+            <li>Confiança alta (~0.85) — muitas fontes FC encontradas</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-color:var(--accent2);font-size:11px;">
+          <p class="yellow">O que ver na interface:</p>
+          <ul class="list" style="font-size:10.5px;margin-top:4px;">
+            <li>Barra de risco: 8-10 blocos vermelhos</li>
+            <li>Quest Log com stamps "FALSO" em cada claim</li>
+            <li>"+N ocorrências" em claims duplicados</li>
+            <li>Painel esquerdo com borda vermelha intensa</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 14 · DEMO — CENÁRIO 2: ALTO RISCO ═══════════════ -->
+<section class="slide" data-notes="Este texto usa linguagem manipuladora e alarmista mas sem uma claim específica verificável. A Google FC pode não retornar nada (ou retornar poucos resultados). O score será alto por causa do NLP — urgência e manipulação. Resultado: ALTO, 0.50-0.70, sem FC ou com poucos resultados.">
+  <div class="slide-inner">
+    <div>
+      <p class="section-label">// 14 — demo · cenário 2</p>
+      <h2 class="sub-headline">CENÁRIO 2: <span class="yellow">ALTO RISCO</span> — só NLP</h2>
+    </div>
+    <div style="position:relative;" class="fade-up">
+      <div class="demo-text" id="text-alto">ALERTA MÁXIMO! O governo está planejando cortar a aposentadoria de TODOS os trabalhadores com mais de 60 anos a partir de janeiro! Isso é um ESCÂNDALO que a mídia não mostra! Políticos corruptos aprovaram essa lei às escondidas de madrugada! AVISE TODOS OS SEUS CONTATOS ANTES QUE SEJA TARDE! Compartilhe agora ou você vai perder seus direitos!</div>
+      <button class="copy-btn" onclick="copyText('text-alto', this)">COPIAR</button>
+    </div>
+    <div class="grid-2">
+      <div class="result-box high fade-up">
+        <p class="rb-title yellow">RESULTADO ESPERADO</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <span class="stamp stamp-yellow">ALTO</span>
+          <span class="stamp stamp-muted" style="font-size:15px;">SEM DADOS FC</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+          <div class="meter-row"><span class="meter-label">Linguística</span><div class="meter-track"><div class="meter-fill red" style="width:80%"></div></div><span class="meter-val danger">~0.80</span></div>
+          <div class="meter-row"><span class="meter-label">Fact-checks</span><div class="meter-track"><div class="meter-fill" style="width:50%;background:var(--muted);"></div></div><span class="meter-val" style="color:var(--muted);">N/A</span></div>
+          <div class="meter-row"><span class="meter-label">Score geral</span><div class="meter-track"><div class="meter-fill yellow" style="width:60%"></div></div><span class="meter-val yellow">~0.60</span></div>
+        </div>
+      </div>
+      <div class="col fade-up">
+        <div class="panel">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">POR QUE ESTE RESULTADO?</p>
+          <ul class="list" style="font-size:11px;">
+            <li>Sem claim específica indexada nos fact-checkers → sem FC</li>
+            <li>Score cai para fórmula sem FC: <code style="color:var(--accent);">linguistic × 0.70</code></li>
+            <li>Muitas maiúsculas (ALERTA, ESCÂNDALO, AVISE, TODOS…)</li>
+            <li>Urgência extrema: "ANTES QUE SEJA TARDE", "Compartilhe agora"</li>
+            <li>Confiança baixa (~0.45) — sem FC para confirmar</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-color:var(--accent2);font-size:11px;">
+          <p class="yellow">O que ver na interface:</p>
+          <ul class="list" style="font-size:10.5px;margin-top:4px;">
+            <li>Barra de risco: 6-7 blocos amarelos</li>
+            <li>Quest Log: estado vazio "NENHUM REGISTO ENCONTRADO"</li>
+            <li>Dimensão Fact-checks = "sem dados" (tracejado)</li>
+            <li>Stamp "SEM DADOS FC" no painel de análise</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 15 · DEMO — CENÁRIO 3: BAIXO RISCO ══════════════ -->
+<section class="slide" data-notes="Texto factual, linguagem neutra, sem urgência. A Google FC pode retornar alguns resultados com rating 'Verdadeiro' ou simplesmente nada. O NLP vai dar score baixo. Resultado: BAIXO ou MODERADO. Confiança razoável se tiver cobertura no GDELT/Wikipedia.">
+  <div class="slide-inner">
+    <div>
+      <p class="section-label">// 15 — demo · cenário 3</p>
+      <h2 class="sub-headline">CENÁRIO 3: RESULTADO <span class="accent">BAIXO</span></h2>
+    </div>
+    <div style="position:relative;" class="fade-up">
+      <div class="demo-text" id="text-baixo">O Instituto Brasileiro de Geografia e Estatística (IBGE) divulgou hoje o resultado do Censo 2022, que aponta a população brasileira em 203,1 milhões de habitantes. O levantamento, realizado ao longo de 2022, é o primeiro censo demográfico realizado no Brasil desde 2010. O Sudeste continua sendo a região mais populosa, com 88,4 milhões de pessoas, seguido pelo Nordeste com 54,6 milhões.</div>
+      <button class="copy-btn" onclick="copyText('text-baixo', this)">COPIAR</button>
+    </div>
+    <div class="grid-2">
+      <div class="result-box low fade-up">
+        <p class="rb-title accent">RESULTADO ESPERADO</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+          <span class="stamp stamp-green">BAIXO</span>
+          <span class="stamp stamp-muted" style="font-size:15px;">SEM DADOS FC</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;">
+          <div class="meter-row"><span class="meter-label">Linguística</span><div class="meter-track"><div class="meter-fill green" style="width:15%"></div></div><span class="meter-val accent">~0.15</span></div>
+          <div class="meter-row"><span class="meter-label">Cobertura</span><div class="meter-track"><div class="meter-fill green" style="width:65%"></div></div><span class="meter-val accent">~0.65</span></div>
+          <div class="meter-row"><span class="meter-label">Score geral</span><div class="meter-track"><div class="meter-fill green" style="width:20%"></div></div><span class="meter-val accent">~0.20</span></div>
+        </div>
+      </div>
+      <div class="col fade-up">
+        <div class="panel">
+          <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">POR QUE ESTE RESULTADO?</p>
+          <ul class="list" style="font-size:11px;">
+            <li>Linguagem neutra, sem urgência ou manipulação</li>
+            <li>Sem maiúsculas excessivas (caps_boost = 0)</li>
+            <li>Fonte oficial citada (IBGE) — GDELT e Wikipedia devem ter cobertura</li>
+            <li>Alta cobertura reduz o segundo termo da fórmula</li>
+            <li>Confiança moderada (~0.50) — sem FC directo</li>
+          </ul>
+        </div>
+        <div class="panel" style="border-color:var(--accent);font-size:11px;">
+          <p class="accent">O que ver na interface:</p>
+          <ul class="list" style="font-size:10.5px;margin-top:4px;">
+            <li>Barra de risco: 2-3 blocos verdes</li>
+            <li>Artigos do GDELT sobre o Censo</li>
+            <li>Artigo da Wikipedia sobre IBGE</li>
+            <li>Quest Log vazio ou com resultados irrelevantes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 16 · ENCERRAMENTO ════════════════════════════════ -->
+<section class="slide" data-notes="Encerre com a mensagem de que o sistema não é infalível — é uma ferramenta de apoio ao pensamento crítico. Próximos passos possíveis: fine-tuning de pesos por tipo de conteúdo, integração com modelos de linguagem para análise semântica mais profunda, expansão para outros idiomas.">
+  <div class="slide-inner" style="align-items:center;text-align:center;gap:18px;">
+    <p class="section-label">// fim da apresentação</p>
+    <h1 class="headline pulse-glow" style="font-size:clamp(58px,10vw,110px);">
+      GAME OVER?
+    </h1>
+    <h2 class="sub-headline" style="color:var(--accent2);">NÃO. A LUTA CONTRA A DESINFORMAÇÃO CONTINUA.</h2>
+    <div class="panel" style="max-width:560px;border-color:var(--accent);text-align:left;">
+      <p style="font-size:12.5px;color:var(--textdim);line-height:1.75;">
+        O <strong class="accent">Mentor Digital</strong> é uma ferramenta de apoio ao pensamento crítico —
+        não substitui a leitura atenta nem o julgamento humano.
+        Combina NLP, fact-checking automático e cobertura midiática para dar
+        <strong class="text">mais contexto</strong> antes de partilhar.
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <span class="tag tag-green">github.com/louiseluli/mentor-digital</span>
+      <span class="tag tag-blue">mentor-digital.onrender.com</span>
+    </div>
+    <div class="block-bar" id="final-bar" style="justify-content:center;margin-top:8px;"></div>
+    <p class="vt" style="font-size:18px;color:var(--muted);margin-top:4px;">
+      ← REVER &nbsp;·&nbsp; R = REINICIAR &nbsp;·&nbsp; N = NOTAS DO APRESENTADOR
+    </p>
+  </div>
+</section>
+
+</div><!-- /deck -->
+
+<!-- ── Nav bar ── -->
+<nav id="nav">
+  <button class="nav-btn" id="btn-prev" onclick="navigate(-1)">◀ ANTERIOR</button>
+  <span id="slide-counter">01 / 17</span>
+  <button class="nav-btn" id="btn-next" onclick="navigate(1)">PRÓXIMO ▶</button>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════ -->
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const TOTAL  = slides.length;
+  let current  = 0;
+  let notesOpen = false;
+
+  // ── Block bars ────────────────────────────────────────
+  function buildBar(id, filled, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    for (let i = 0; i < 10; i++) {
+      const b = document.createElement('div');
+      b.className = 'block' + (i < filled ? ' ' + cls : '');
+      el.appendChild(b);
+    }
+  }
+  buildBar('bar-low',  3,  'on-g');
+  buildBar('bar-mod',  5,  'on-y');
+  buildBar('bar-high', 7,  'on-y');
+  buildBar('bar-crit', 10, 'on-r');
+  buildBar('final-bar',10, 'on-g');
+
+  // ── Animate final bar (rainbow) ───────────────────────
+  function animateFinalBar() {
+    const bar = document.getElementById('final-bar');
+    if (!bar) return;
+    const blocks = bar.querySelectorAll('.block');
+    blocks.forEach((b, i) => {
+      setTimeout(() => {
+        b.classList.remove('on-g','on-y','on-r');
+        b.classList.add(i < 3 ? 'on-g' : i < 7 ? 'on-y' : 'on-r');
+      }, i * 70);
+    });
+  }
+
+  // ── Restart animations in a slide ─────────────────────
+  function restartAnimations(slide) {
+    slide.querySelectorAll('.fade-up').forEach(el => {
+      el.style.animation = 'none';
+      void el.offsetHeight;
+      el.style.animation = '';
+    });
+    slide.querySelectorAll('.meter-fill').forEach(el => {
+      el.style.animation = 'none';
+      void el.offsetHeight;
+      el.style.animation = 'barFill 1.2s ease forwards';
+    });
+  }
+
+  // ── Core navigation ───────────────────────────────────
+  function goTo(idx, dir) {
+    if (idx < 0 || idx >= TOTAL) return;
+
+    const from = slides[current];
+    const to   = slides[idx];
+
+    from.classList.remove('active');
+    if (dir > 0) {
+      from.classList.add('out-left');
+      setTimeout(() => from.classList.remove('out-left'), 350);
+    }
+
+    current = idx;
+    to.classList.add('active');
+    restartAnimations(to);
+    updateNav();
+
+    if (current === TOTAL - 1) setTimeout(animateFinalBar, 600);
+  }
+
+  function navigate(dir) { goTo(current + dir, dir); }
+
+  // ── Restart ───────────────────────────────────────────
+  function restartPresentation() {
+    slides.forEach(s => {
+      s.classList.remove('active','out-left');
+    });
+    current = 0;
+    slides[0].classList.add('active');
+    restartAnimations(slides[0]);
+    updateNav();
+  }
+
+  // ── Update nav UI ─────────────────────────────────────
+  function updateNav() {
+    document.getElementById('btn-prev').disabled = current === 0;
+    document.getElementById('btn-next').disabled = current === TOTAL - 1;
+    document.getElementById('slide-counter').textContent =
+      String(current + 1).padStart(2,'0') + ' / ' + String(TOTAL).padStart(2,'0');
+    const pct = TOTAL > 1 ? (current / (TOTAL - 1)) * 100 : 100;
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }
+
+  // ── Notes panel ───────────────────────────────────────
+  function openNotes() {
+    const text = slides[current].dataset.notes || 'Sem notas para este slide.';
+    document.getElementById('notes-title').textContent =
+      'NOTAS — SLIDE ' + String(current + 1).padStart(2,'0');
+    document.getElementById('notes-body').innerHTML =
+      text.split('\n').map(l => `<p>${l}</p>`).join('');
+    document.getElementById('notes-panel').classList.add('open');
+    notesOpen = true;
+  }
+  function closeNotes() {
+    document.getElementById('notes-panel').classList.remove('open');
+    notesOpen = false;
+  }
+
+  // ── Copy helper ───────────────────────────────────────
+  function copyText(id, btn) {
+    const el = document.getElementById(id);
+    navigator.clipboard.writeText(el.textContent.trim()).then(() => {
+      btn.textContent = 'COPIADO ✓';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'COPIAR'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ── Keyboard ──────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (notesOpen) {
+      if (e.key === 'n' || e.key === 'N' || e.key === 'Escape') closeNotes();
+      return;
+    }
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown':
+        e.preventDefault(); navigate(1); break;
+      case ' ':
+        e.preventDefault(); navigate(1); break;
+      case 'ArrowLeft': case 'PageUp':
+        e.preventDefault(); navigate(-1); break;
+      case 'r': case 'R':
+        restartPresentation(); break;
+      case 'n': case 'N':
+        openNotes(); break;
+      default:
+        if (current === 0) navigate(1);
+    }
+  });
+
+  // ── Touch / swipe ─────────────────────────────────────
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend',   e => {
+    const d = tx - e.changedTouches[0].clientX;
+    if (Math.abs(d) > 50) navigate(d > 0 ? 1 : -1);
+  }, { passive: true });
+
+  // ── CRT sweep line ────────────────────────────────────
+  const sweep = document.createElement('div');
+  sweep.style.cssText =
+    'position:fixed;left:0;right:0;height:3px;pointer-events:none;z-index:9998;' +
+    'background:linear-gradient(transparent,rgba(0,255,136,0.07),transparent);' +
+    'animation:sweepLine 9s linear infinite;';
+  document.body.appendChild(sweep);
+
+  // ── Init ──────────────────────────────────────────────
+  updateNav();
+</script>
+</body>
+</html>

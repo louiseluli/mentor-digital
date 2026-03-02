@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 GDELT_API_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 DEFAULT_MAX_RECORDS = 10     # máx. de artigos por busca (API suporta até 250)
 DEFAULT_TIMESPAN = "MONTH"   # janela temporal padrão: últimos 30 dias
-DEFAULT_TIMEOUT = 15.0       # GDELT pode ser lento
+DEFAULT_TIMEOUT = 25.0       # GDELT pode ser lento
 MAX_QUERY_LENGTH = 150       # caracteres — evitar queries muito longas
 
 
@@ -145,7 +145,12 @@ async def search_articles(
         async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
             resp = await client.get(GDELT_API_URL, params=params)
             resp.raise_for_status()
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                # GDELT sometimes returns empty body or HTML instead of JSON
+                logger.warning("GDELT API retornou resposta não-JSON para query=%r", clean)
+                return GDELTResponse(query=query, articles=[])
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code
         logger.warning("GDELT API HTTP %s para query=%r", status, clean)

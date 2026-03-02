@@ -193,7 +193,8 @@ export default function ConversaPage() {
         options={options}
         loading={loading}
         onOption={handleOption}
-        contentId={state === "end" ? contentId : undefined}
+        contentId={state === "end" && analysisReady ? contentId : undefined}
+        analysisRunning={state === "end" && !analysisReady}
       />
     </main>
   );

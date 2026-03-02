@@ -5,10 +5,12 @@ Combina quatro dimensões para um score geral de risco:
   1. Linguística  — urgência, manipulação, proporção de maiúsculas (NLP local)
   2. Fact-checks  — vereditos encontrados pelas agências (Google FC + IFCN)
   3. Cobertura    — presença em GDELT, Wikipedia e verificadores brasileiros
+  4. Claim × No-FC — boost when many claims but no fact-checks back them
 
 Algoritmo:
-  if fc_data:  overall = linguistic×0.30 + factcheck×0.60 + (1−coverage)×0.10
-  else:        overall = linguistic×0.70 + (1−coverage×0.30)×0.30
+  if fc_data:  overall = linguistic×0.25 + factcheck×0.65 + (1−coverage)×0.10
+  else:        overall = linguistic×0.55 + claim_penalty×0.15 + (1−coverage×0.30)×0.30
+               Floors: manipulation≥0.30 → min 0.40; manipulation≥0.50 → min 0.55
 
 Confiança: 0.30 (base) + 0.40 (se FC disponível) + coverage×0.30
 
@@ -239,6 +241,13 @@ def compute_risk_score(analysis: dict) -> dict:
 
     has_fc = bool(all_fc_results)
 
+    # ── Claim penalty: high claims + no FC = unverified scary claims ──────
+    claim_score = nlp.get("claim", {}).get("score", 0.0)
+    manip_score = nlp.get("manipulation", {}).get("score", 0.0)
+    urgency_score = nlp.get("urgency", {}).get("score", 0.0)
+    # claim_penalty ranges 0-1: higher when many claims remain unchecked
+    claim_penalty = claim_score * 0.70 + manip_score * 0.30
+
     if has_fc:
         overall = linguistic * 0.25 + fc_signal * 0.65 + (1 - coverage) * 0.10
         # Floor: se agências confirmaram como falso, nunca classificar abaixo de "high"
@@ -247,8 +256,20 @@ def compute_risk_score(analysis: dict) -> dict:
         elif verdict == "mixed":
             overall = max(overall, 0.40)
     else:
-        # Sem FC: sinal linguístico tem peso maior; cobertura reduz incerteza
-        overall = linguistic * 0.70 + (1 - coverage * 0.30) * 0.30
+        # Sem FC: sinal linguístico + claim penalty + cobertura
+        overall = linguistic * 0.55 + claim_penalty * 0.15 + (1 - coverage * 0.30) * 0.30
+
+        # Floors: when manipulation is detected, don't let score drop too low
+        # These catch the case where a text uses conspiracy language but has
+        # low urgency (no "URGENTE", no "compartilhe") — still suspicious
+        if manip_score >= 0.50:
+            overall = max(overall, 0.55)
+        elif manip_score >= 0.30:
+            overall = max(overall, 0.40)
+
+        # Combined signal boost: urgency + manipulation together = stronger signal
+        if urgency_score >= 0.20 and manip_score >= 0.20:
+            overall = max(overall, 0.45)
 
     overall = max(0.0, min(1.0, overall))
     confidence = min(1.0, 0.30 + (0.40 if has_fc else 0.0) + coverage * 0.30)
@@ -277,6 +298,7 @@ def compute_risk_score(analysis: dict) -> dict:
             "linguistic": round(linguistic, 3),
             "factcheck": round(fc_signal, 3) if has_fc else None,
             "coverage": round(coverage, 3),
+            "claim_penalty": round(claim_penalty, 3) if not has_fc else None,
         },
         "confidence": round(confidence, 3),
         "fc_verdict_breakdown": breakdown,

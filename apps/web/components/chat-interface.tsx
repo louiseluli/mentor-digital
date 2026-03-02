@@ -19,6 +19,7 @@ interface Props {
   loading: boolean;
   onOption: (id: string, title: string) => void;
   contentId?: string;
+  analysisRunning?: boolean;
 }
 
 export default function ChatInterface({
@@ -27,6 +28,7 @@ export default function ChatInterface({
   loading,
   onOption,
   contentId,
+  analysisRunning,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +71,22 @@ export default function ChatInterface({
               ▸ {opt.title}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Card de análise em andamento */}
+      {analysisRunning && !loading && (
+        <div className="hud-panel rounded-xl p-5 space-y-3 border-hud-warning/40">
+          <div className="space-y-1">
+            <p className="font-display text-2xl text-hud-warning animate-pulse">
+              ANALISANDO FONTES…
+            </p>
+            <p className="text-xs font-mono text-hud-muted">
+              Obrigado por pensar antes de compartilhar. A análise completa do
+              conteúdo está sendo finalizada — fact-checks, cobertura midiática e
+              contexto da Wikipedia.
+            </p>
+          </div>
         </div>
       )}
 

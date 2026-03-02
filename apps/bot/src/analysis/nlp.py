@@ -82,6 +82,11 @@ _URGENCY_RULES: list[_Rule] = [
     _Rule(r'\bsendo\s+(?:censurado|bloqueado|apagado)\b', 0.45, "sendo censurado (PT)"),
     _Rule(r'\bproibido\s+de\s+circular\b',             0.50, "proibido circular (PT)"),
 
+    # ── Urgência política (PT/EN) ─────────────────────────────────────────────
+    _Rule(r'\b(?:vai\s+(?:acabar|fechar|destruir)\s+(?:o|a|os|as))\b',  0.20, "urgência: vai destruir (PT)"),
+    _Rule(r'\b(?:aprovaram?\s+(?:de\s+madrugada|escondido|às\s+escuras))\b', 0.40, "urgência: aprovado escondido (PT)"),
+    _Rule(r'\b(?:passed\s+(?:secretly|quietly|in\s+secret|overnight))\b', 0.40, "urgência: passed secretly (EN)"),
+
     # ── Chamadas à ação urgente (EN) ──────────────────────────────────────────
     _Rule(r'\burgent(?:ly)?\b',                        0.35, "urgent (EN)"),
     _Rule(r'\bshare\s+(?:now|immediately|asap|this)\b', 0.25, "share now (EN)"),
@@ -106,7 +111,7 @@ _URGENCY_RULES: list[_Rule] = [
     _Rule(r'!!+',                                      0.12, "exclamações múltiplas"),
     _Rule(r'\?{2,}',                                   0.08, "interrogações múltiplas"),
     _Rule(r'(?:!!+\??|\?+!+){1,}',                     0.10, "mistura !?"),
-    _Rule(r'[A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ]{4,}',                  0.08, "palavras em CAIXA ALTA"),  # capturado per-match
+    _Rule(r'\b[A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇ]{4,}\b',              0.08, "palavras em CAIXA ALTA"),  # capturado per-match
 ]
 
 
@@ -177,6 +182,52 @@ _MANIPULATION_RULES: list[_Rule] = [
     _Rule(r'\b(?:chocante|inacreditável|jaw-?dropping|unbelievable|incroyable|increíble)\b',      0.25, "clickbait: sensação"),
     _Rule(r'\b(?:nunca\s+antes\s+(?:visto|revelado|mostrado)|never\s+before\s+(?:seen|revealed))\b', 0.30, "clickbait: exclusividade"),
     _Rule(r'\b(?:segredo\s+(?:revelado|exposto|oculto)|secret\s+(?:revealed?|exposed?|hidden)|secret\s+révélé)\b', 0.35, "clickbait: segredo revelado"),
+
+    # ── Escondendo / ocultando — verbo progressivo (PT/EN) ───────────────
+    _Rule(r'\b(?:está|estão|estava|estavam)\s+(?:escondendo|ocultando|censurando|encobrindo|mentindo)\b', 0.40, "conspiração: escondendo (PT)"),
+    _Rule(r'\b(?:is|are|was|were)\s+(?:hiding|concealing|covering\s+up|censoring|suppressing|lying\s+about)\b', 0.40, "conspiração: hiding (EN)"),
+    _Rule(r'\bescondendo\s+(?:isso|isto|da\s+população|do\s+povo|de\s+(?:você|nós|todos))\b', 0.45, "conspiração: escondendo da população (PT)"),
+    _Rule(r'\b(?:hiding|concealing)\s+(?:this|it|the\s+truth)\s+from\b', 0.45, "conspiração: hiding from public (EN)"),
+
+    # ── Ninguém fala / informação suprimida ──────────────────────────────
+    _Rule(r'\bninguém\s+(?:fala|mostra|comenta|sabe)\b', 0.35, "conspiração: ninguém fala (PT)"),
+    _Rule(r'\b(?:população|povo)\s+não\s+(?:sabe|pode\s+saber|fica\s+sabendo)\b', 0.35, "conspiração: população não sabe (PT)"),
+    _Rule(r'\b(?:no\s+one\s+(?:talks?|knows?|speaks?)\s+about|mainstream\s+media\s+(?:won\'?t|doesn\'?t|refuses?\s+to))\b', 0.35, "conspiração: suppressed info (EN)"),
+
+    # ── Fraude e conspirações políticas ───────────────────────────────────
+    _Rule(r'\b(?:fraude\s+(?:nas?\s+)?(?:urnas?|eleição|eleições|eleitoral)|election\s+fraud|rigged\s+(?:election|vote|system))\b', 0.50, "conspiração: fraude eleitoral"),
+    _Rule(r'\b(?:decreto\s+secreto|lei\s+secreta|reunião\s+secreta|plano\s+secreto|secret\s+(?:decree|order|plan|law))\b', 0.45, "conspiração: plano secreto"),
+    _Rule(r'\b(?:golpe\s+(?:de\s+estado|militar|comunista|(?:da|do)\s+(?:esquerda|direita))|coup\s+d\'?état|military\s+coup)\b', 0.45, "conspiração: golpe"),
+    _Rule(r'\b(?:ditadura|dictatorship|tyrann[yie]|tiran[oi]a|authoritarian\s+regime)\b', 0.35, "conspiração: ditadura/tirania"),
+    _Rule(r'\b(?:confiscar|confiscação|apreender\s+(?:bens|armas|propriedade)|seize|confiscate|confiscation)\b', 0.30, "ameaça: confisco"),
+    _Rule(r'\b(?:compra\s+de\s+votos?|votos?\s+comprados?|buying\s+votes?|vote\s+buying)\b', 0.45, "conspiração: compra de votos"),
+
+    # ── Hoax / embuste / farsa ───────────────────────────────────────────
+    _Rule(r'\b(?:hoax|farsa|embuste|scam|armação|montagem)\b', 0.35, "manipulação: hoax/farsa"),
+    _Rule(r'\b(?:invent(?:ed|ou|aram|ado)|fabricat(?:ed|ou))\s+(?:by|p(?:or|ela|elo)|para)\b', 0.30, "manipulação: inventado/fabricado"),
+    _Rule(r'\b(?:para|to|por)\s+(?:destruir|destroy|acabar\s+com|undermine|sabotar|sabotage|dominar|dominate)\b', 0.25, "manipulação: para destruir/dominar"),
+    _Rule(r'\b(?:é\s+tudo\s+mentira|it\'?s\s+all\s+(?:a\s+)?li[ea]s?|tudo\s+(?:uma\s+)?farsa)\b', 0.40, "manipulação: é tudo mentira"),
+
+    # ── Acorde / abra os olhos ───────────────────────────────────────────
+    _Rule(r'\b(?:acorde[mn]?|abr[ae]\s+os\s+olhos|wake\s+up|open\s+your\s+eyes|red\s+pill)\b', 0.30, "manipulação: acorde/abra os olhos"),
+    _Rule(r'\b(?:lavagem\s+cerebral|brain\s*wash(?:ing|ed)?)\b', 0.35, "manipulação: lavagem cerebral"),
+
+    # ── Cura milagrosa / negação científica ──────────────────────────────
+    _Rule(r'\b(?:cura\s+(?:milagrosa|definitiva|secreta|natural|caseira)|miracle\s+cure|secret\s+(?:cure|remedy))\b', 0.40, "manipulação: cura milagrosa"),
+    _Rule(r'\b(?:médicos?\s+não\s+(?:querem|vão)\s+(?:te\s+)?(?:contar|dizer|revelar)|doctors?\s+(?:don\'?t|won\'?t)\s+(?:tell|want\s+you\s+to\s+know))\b', 0.45, "conspiração: médicos não contam"),
+    _Rule(r'\b(?:a\s+indústria\s+(?:farmacêutica|alimentar|da\s+saúde)|big\s+pharma|big\s+(?:food|tech|oil))\b', 0.30, "conspiração: indústria/big pharma"),
+    _Rule(r'\b(?:para\s+(?:vender|lucrar|ganhar\s+dinheiro)|to\s+(?:sell|profit|make\s+money))\b', 0.25, "conspiração: motivo de lucro"),
+
+    # ── Obrigar / forçar a população ─────────────────────────────────────
+    _Rule(r'\b(?:obrigar\s+(?:todos|a\s+população)|forçar\s+(?:todos|as\s+pessoas|o\s+povo))\b', 0.30, "ameaça: obrigar todos (PT)"),
+    _Rule(r'\b(?:force\s+everyone|mandatory\s+for\s+(?:all|everyone)|compulsory|obrigatório\s+para\s+todos)\b', 0.30, "ameaça: mandatory for all (EN)"),
+
+    # ── Não querem que você saiba (broader) ──────────────────────────────
+    _Rule(r'\b(?:não\s+querem\s+que\s+(?:você|vocês|nós|o\s+povo)\s+(?:saiba|veja|descubra))\b', 0.40, "conspiração: não querem que saiba (PT)"),
+    _Rule(r'\b(?:you\'?re\s+not\s+(?:supposed|allowed)\s+to\s+(?:know|see|hear))\b', 0.40, "conspiração: not supposed to know (EN)"),
+
+    # ── Agenda oculta / hidden agenda ────────────────────────────────────
+    _Rule(r'\b(?:agenda\s+(?:oculta|secreta|globalista)|hidden\s+agenda|great\s+reset)\b', 0.40, "conspiração: agenda oculta"),
 ]
 
 
@@ -219,7 +270,12 @@ def _apply_rules(text: str, rules: list[_Rule]) -> tuple[float, list[str]]:
 
     for rule in rules:
         try:
-            matches = re.findall(rule.pattern, text_lower, re.IGNORECASE | re.UNICODE)
+            # CAIXA ALTA rule must match against original (not lowered) text
+            # so it only catches truly ALL-CAPS words
+            if "CAIXA ALTA" in rule.label:
+                matches = re.findall(rule.pattern, text, re.UNICODE)
+            else:
+                matches = re.findall(rule.pattern, text_lower, re.IGNORECASE | re.UNICODE)
         except re.error:
             continue
         if matches:

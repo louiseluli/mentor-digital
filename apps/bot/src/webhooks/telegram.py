@@ -33,7 +33,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3001")
 
 # Singleton — inicializado na primeira chamada
 _session_mgr: "SessionManager | None" = None

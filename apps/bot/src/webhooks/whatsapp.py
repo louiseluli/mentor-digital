@@ -31,7 +31,7 @@ from src.session_manager import SessionManager
 logger = logging.getLogger(__name__)
 
 GRAPH_API_URL = "https://graph.facebook.com/v22.0"
-WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3001")
 
 # Limites da WhatsApp Cloud API
 _MAX_BUTTONS = 3       # botão interativo: máximo 3 botões

@@ -202,7 +202,7 @@ flow:
 
   # ── FECHAMENTO ──────────────────────────────────────────────────────────────
   closing:
-    message: "Suas reflexões são muito valiosas! 💛 Agora, com base em tudo o que você pensou, você ainda quer compartilhar este conteúdo?\n\n🔗 Ver análise completa: {web_platform_url}/analise/{content_id}"
+    message: "Suas reflexões são muito valiosas! 💛 Agora, com base em tudo o que você pensou, você ainda quer compartilhar este conteúdo?"
     type: "buttons"
     options:
       - id: "yes_share"
@@ -217,7 +217,7 @@ flow:
 
   # ── FEEDBACK ────────────────────────────────────────────────────────────────
   feedback_share:
-    message: "Tudo bem! O importante é que você pensou sobre isso antes. Se quiser, nosso espaço de investigação na web tem ferramentas para analisar fontes. Fica aqui o link: {web_platform_url}"
+    message: "Tudo bem! O importante é que você pensou sobre isso antes. Se quiser, nosso espaço de investigação na web tem ferramentas para analisar fontes."
     next_state: "end"
 
   feedback_not_share:

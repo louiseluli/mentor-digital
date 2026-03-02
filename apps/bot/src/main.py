@@ -29,7 +29,7 @@ from src.session_manager import SessionManager
 
 load_dotenv()
 
-_WEB_PLATFORM_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+_WEB_PLATFORM_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3001")
 
 
 # ── Logging estruturado (JSON) ─────────────────────────────────────────────────
@@ -109,9 +109,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS — origens lidas de ALLOWED_ORIGINS (vírgula-separado)
-# Dev default: http://localhost:3000
+# Dev default: http://localhost:3000,http://localhost:3001
 # Prod: definir ALLOWED_ORIGINS=https://mentor-digital.vercel.app no Railway
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
@@ -182,11 +182,10 @@ def _collect_web_messages(fsm, initial_response: dict) -> list:
     return all_msgs
 
 
-def _format_findings_for_chat(results: dict) -> str:
+def _format_findings_for_chat(results: dict, content_id: str = "") -> str:
     """Formata achados de análise (com risk_score) para injetar no fechamento da conversa web."""
     risk = results.get("risk_score") or {}
     level = risk.get("level", "")
-    verdict = risk.get("verdict", "no_data")
     verdict_pt = risk.get("verdict_pt", "Sem verificações específicas encontradas")
     overall = risk.get("overall", 0.0)
     confidence = risk.get("confidence", 0.0)
@@ -224,14 +223,21 @@ def _format_findings_for_chat(results: dict) -> str:
         lines.append(f"\n🇧🇷 Mencionado em {len(br_fc)} artigo(s) de verificadores brasileiros "
                      f"({', '.join(sources)})")
 
-    # GDELT
+    # GDELT + Google News — reliable sources
     gdelt = results.get("gdelt", {})
-    total_articles = (
-        len(gdelt.get("por", {}).get("articles", []))
-        + len(gdelt.get("en", {}).get("articles", []))
+    all_articles = (
+        gdelt.get("por", {}).get("articles", [])
+        + gdelt.get("en", {}).get("articles", [])
     )
-    if total_articles:
-        lines.append(f"\n📰 {total_articles} artigo(s) na mídia sobre o tema.")
+    if all_articles:
+        lines.append(f"\n📰 {len(all_articles)} artigo(s) de fontes confiáveis:")
+        seen_domains = set()
+        for a in all_articles[:4]:
+            domain = a.get("domain", "")
+            title = a.get("title", "")[:60]
+            if domain not in seen_domains and title:
+                lines.append(f"  • {title} ({domain})")
+                seen_domains.add(domain)
 
     # Wikipedia
     wiki = results.get("wikipedia", {})
@@ -240,6 +246,10 @@ def _format_findings_for_chat(results: dict) -> str:
         w = wiki_results[0]
         extract = w.get("extract", "")[:100]
         lines.append(f"\n📚 Wikipedia — {w.get('title', '')}: {extract}…")
+
+    # Link to full analysis page
+    if content_id:
+        lines.append(f"\n🔗 Ver análise completa: {_WEB_PLATFORM_URL}/analise/{content_id}")
 
     return "\n".join(lines)
 
@@ -282,6 +292,17 @@ async def get_analysis(request: Request, content_id: str):
     """
     data = _get_session_mgr().get_analysis(content_id)
     if data is None:
+        # Check if analysis is still running (web chat session exists but not ready)
+        raw = _get_session_mgr().redis.get(f"{_WEB_CHAT_PREFIX}{content_id}")
+        if raw:
+            import json as _json
+            session = _json.loads(raw)
+            if not session.get("analysis_ready", False):
+                return Response(
+                    content='{"status":"processing","detail":"Análise em andamento"}',
+                    status_code=202,
+                    media_type="application/json",
+                )
         raise HTTPException(status_code=404, detail="Análise não encontrada ou expirada")
     return data
 
@@ -385,7 +406,7 @@ async def chat_reply(request: Request, session_id: str):
     if fsm.state == "closing" and analysis_ready:
         results = _get_session_mgr().get_analysis(fsm.context.content_id)
         if results:
-            findings = _format_findings_for_chat(results)
+            findings = _format_findings_for_chat(results, fsm.context.content_id)
             messages.insert(0, {"type": "text", "body": findings})
 
     _save_web_chat(session_id, fsm, analysis_ready=analysis_ready)

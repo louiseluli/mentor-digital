@@ -15,6 +15,7 @@ class Config:
     whatsapp_access_token: str
     web_platform_url: str
     google_api_key: str
+    newsapi_key: str
     environment: str
 
     def __init__(self):
@@ -26,8 +27,9 @@ class Config:
         self.whatsapp_app_secret = os.getenv("WHATSAPP_APP_SECRET", "")
         self.whatsapp_phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
         self.whatsapp_access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
-        self.web_platform_url = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+        self.web_platform_url = os.getenv("WEB_PLATFORM_URL", "http://localhost:3001")
         self.google_api_key = os.getenv("GOOGLE_API_KEY", "")
+        self.newsapi_key = os.getenv("NEWSAPI_KEY", "")
         self.environment = os.getenv("ENVIRONMENT", "development")
 
     @staticmethod

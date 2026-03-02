@@ -24,25 +24,40 @@ export default function GDELTSection({ por, en }: Props) {
     }
   }
 
-  if (all.length === 0) return null;
+  const hasError = Boolean(por.error || en.error);
 
   return (
     <section className="space-y-3">
       <h2 className="text-sm font-medium text-muted-foreground">
-        Cobertura da mídia global{" "}
-        <span className="font-normal text-xs">(via GDELT, últimos 30 dias)</span>
+        Cobertura na mídia{" "}
+        <span className="font-normal text-xs">(fontes de notícias brasileiras e globais)</span>
       </h2>
 
-      <div className="space-y-2">
-        {all.slice(0, 5).map((article) => (
-          <ArticleRow key={article.url} article={article} />
-        ))}
-      </div>
+      {all.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border px-4 py-5 text-center space-y-1">
+          <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest">
+            {hasError ? "Erro ao buscar fontes" : "Nenhuma fonte encontrada"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {hasError
+              ? "Não foi possível consultar as fontes de notícias no momento."
+              : "Não encontramos artigos de mídia sobre este conteúdo. Isso não confirma nem nega a informação."}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {all.slice(0, 5).map((article) => (
+              <ArticleRow key={article.url} article={article} />
+            ))}
+          </div>
 
-      {all.length > 5 && (
-        <p className="text-xs text-muted-foreground">
-          +{all.length - 5} artigos adicionais encontrados.
-        </p>
+          {all.length > 5 && (
+            <p className="text-xs text-muted-foreground">
+              +{all.length - 5} artigos adicionais encontrados.
+            </p>
+          )}
+        </>
       )}
     </section>
   );

@@ -16,7 +16,7 @@ from src.engine.fsm import QuestioningFSM
 BOT = "🤖"
 USER_PROMPT = "\nVocê: "
 DIVIDER = "─" * 42
-WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3000")
+WEB_URL = os.getenv("WEB_PLATFORM_URL", "http://localhost:3001")
 
 
 def _fill_placeholders(text: str, ctx: ConversationContext) -> str:

@@ -25,6 +25,8 @@ from src.models import ConversationContext
 from src.analysis.fact_checker import search_claims, serialize_response
 from src.analysis.domain_checker import check_domain, serialize_domain_response
 from src.analysis.gdelt import search_articles, serialize_gdelt_response
+from src.analysis.google_news import search_google_news
+from src.analysis.newsapi import search_newsapi
 from src.analysis.nlp import analyze_text, serialize_nlp_result
 from src.analysis.wikipedia_api import search_wikipedia
 from src.analysis.brazilian_fc import search_brazilian_fc
@@ -52,26 +54,162 @@ def _extract_query(ctx: ConversationContext, max_length: int = 200) -> str:
     return truncated[:last_space] if last_space > 0 else truncated
 
 
-def _extract_fc_query(full_query: str, max_length: int = 90) -> str:
-    """Extrai query curta focada na afirmação principal para a Google FC API.
+def _extract_fc_query(full_query: str) -> str:
+    """Extrai query curta focada no TÓPICO para a Google FC API.
 
-    A API retorna melhores resultados com queries curtas (idealmente ≤90 chars)
-    porque faz matching semântico de claims — não busca full-text.
-
-    Estratégia: usa a primeira frase do texto, onde geralmente está a afirmação
-    central. Se não encontrar pontuação de fim de frase nos primeiros 120 chars,
-    trunca em max_length sem cortar palavras.
+    A API faz matching semântico de claims e retorna melhores resultados com
+    3-5 palavras-chave de tópico (e.g. 'vacinas autismo crianças').
+    Numbers/dates are removed — they make queries too specific and miss
+    broader fact-checks about the same topic.
     """
-    if not full_query or len(full_query) <= max_length:
+    if not full_query:
         return full_query
-    # Primeira frase: primeiro . ! ? dentro dos primeiros 120 chars
-    m = re.search(r"[.!?]", full_query[:120])
-    if m and m.start() >= 15:          # frase mínima de 15 chars para ter sentido
-        return full_query[:m.start()].strip()
-    # Fallback: trunca em max_length sem cortar palavra no meio
-    truncated = full_query[:max_length]
-    last_space = truncated.rfind(" ")
-    return truncated[:last_space] if last_space > 20 else truncated
+    # FC API: content words first (vacinas, autismo), then proper nouns (Harvard).
+    # Proper nouns are often attribution that dilute semantic claim matching.
+    kw = _extract_keywords(full_query, max_words=10)
+    words = [w for w in kw.split() if not w.replace("%", "").replace(",", "").replace(".", "").isdigit()]
+    # Move lowercase words (content) before uppercase (proper nouns)
+    content = [w for w in words if w[0].islower()]
+    proper = [w for w in words if w[0].isupper()]
+    reordered = content + proper
+    return " ".join(reordered[:4]) if reordered else kw
+
+
+# Stopwords PT + EN que não agregam à busca
+_PT_STOPWORDS = {
+    # ── Português ──
+    "a", "à", "ao", "aos", "as", "às", "com", "como", "da", "das", "de",
+    "do", "dos", "e", "é", "em", "entre", "esse", "essa", "este", "esta",
+    "eu", "foi", "já", "mais", "mas", "na", "nas", "no", "nos", "não",
+    "o", "os", "ou", "para", "pela", "pelas", "pelo", "pelos", "por",
+    "que", "quem", "se", "seu", "sua", "são", "também", "tem", "um",
+    "uma", "vai", "ter", "todo", "toda", "todos", "todas", "muito",
+    "ser", "sim", "sobre", "confirmou", "segundo", "devido", "prova",
+    "ficar", "dias", "total", "sem", "precedentes", "partir", "estão",
+    "após", "ainda", "apenas", "até", "cada", "pode", "qualquer",
+    "tipo", "uso", "vez", "hora", "horas", "mês", "ano",
+    "está", "estão", "estava", "foram", "seria", "sendo",
+    "isso", "isto", "aquilo", "aqui", "ali", "lá",
+    "dados", "forma", "parte", "grande", "novo", "nova",
+    "real", "coisa", "nunca", "sempre", "outro", "outra",
+    # Meses PT — nunca úteis como termos de busca
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+    # Palavras genéricas que parecem nomes próprios mas não são entidades
+    "terra", "mundo", "país", "brasil", "brasileiro", "brasileiros",
+    "brasileira", "estudo", "pesquisa", "científico", "conforme", "afirma",
+    # ── English ──
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "shall", "can", "must",
+    "i", "you", "he", "she", "it", "we", "they", "me", "him", "her",
+    "us", "them", "my", "your", "his", "its", "our", "their",
+    "this", "that", "these", "those", "what", "which", "who", "whom",
+    "and", "but", "or", "nor", "not", "so", "yet", "both", "either",
+    "in", "on", "at", "to", "for", "of", "with", "by", "from", "up",
+    "about", "into", "through", "during", "before", "after", "above",
+    "below", "between", "out", "off", "over", "under", "again", "further",
+    "then", "once", "here", "there", "when", "where", "why", "how",
+    "all", "any", "each", "every", "no", "some", "such", "than", "too",
+    "very", "just", "also", "now", "if", "as", "because", "until", "while",
+    "only", "own", "same", "other", "more", "most", "few", "many", "much",
+    "confirmed", "according", "says", "said", "reports", "announced",
+    "revealed", "claimed", "stated", "told", "showed", "found",
+    # Months EN
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december",
+}
+
+# Palavras de manipulação/urgência — ruído para buscas, não são entidades
+_NOISE_WORDS = {
+    # PT
+    "urgente", "atenção", "cuidado", "compartilhe", "compartilhar",
+    "divulgue", "espalhe", "repasse", "apaguem", "censurem", "deletem",
+    "proibir", "escondendo", "esconder", "revelou", "revelar", "preso",
+    "antes", "amanhã", "agora", "todos", "ninguém",
+    # Palavras dramáticas/sensacionalistas — ruído para buscas
+    "escuridão", "caos", "destruição", "apocalipse", "colapso",
+    "chocante", "inacreditável", "impressionante", "absurdo",
+    # EN
+    "urgent", "attention", "warning", "share", "spread", "repost",
+    "hiding", "hidden", "hide", "cover-up", "coverup", "censored",
+    "banned", "deleted", "removed", "shocking", "unbelievable",
+    "incredible", "breaking", "massive", "huge", "devastating",
+    "destruction", "chaos", "collapse", "apocalypse",
+}
+
+# Palavras genéricas que parecem nomes próprios por estarem capitalizadas
+# mas não são entidades únicas — atrapalham buscas semânticas
+# Parecem nomes próprios mas são genéricos — tratar como other_terms
+_GENERIC_CAPITALIZED = {
+    # PT
+    "governo", "estado", "presidente", "lei", "reforma",
+    "médicos", "cientistas", "pesquisadores",
+    # EN
+    "government", "governments", "president", "scientists", "doctors",
+    "researchers", "officials", "experts", "public", "people",
+}
+
+
+def _extract_keywords(query: str, max_words: int = 6) -> str:
+    """Extrai termos-chave do texto para buscas em APIs externas.
+
+    Usado por FC API, Wikipedia, GDELT e Google News. Filtra stopwords,
+    palavras de urgência/manipulação, e ALL-CAPS de ênfase (>5 chars).
+    Prioriza: acrônimos reais (NASA, OMS), nomes próprios, números.
+    """
+    if not query or len(query) <= 30:
+        return query
+
+    words = query.replace(",", " ").replace(".", " ").split()
+    key_terms: list[str] = []
+    other_terms: list[str] = []
+
+    for word in words:
+        clean = word.strip(".,;:!?\"'()[]{}–—")
+        if not clean:
+            continue
+        lower = clean.lower()
+        if lower in _PT_STOPWORDS or lower in _NOISE_WORDS:
+            continue
+        # Generic capitalized words (Terra, Governo, Estudo) → treat as regular
+        if lower in _GENERIC_CAPITALIZED:
+            other_terms.append(lower)
+            continue
+        # ALL-CAPS ≤5 chars = likely acronym (NASA, OMS, PIB, COVID)
+        # ALL-CAPS >5 chars = likely emphasis shouting → treat as regular word
+        if clean.isupper() and len(clean) <= 5 and len(clean) >= 2:
+            key_terms.append(clean)
+        elif clean.isupper() and len(clean) > 5:
+            other_terms.append(lower)
+        elif clean[0].isupper() and len(clean) >= 3:
+            key_terms.append(clean)
+        elif any(c.isdigit() for c in clean):
+            key_terms.append(clean)
+        else:
+            other_terms.append(clean)
+
+    result = key_terms[:max_words]
+    remaining = max_words - len(result)
+    if remaining > 0:
+        result.extend(other_terms[:remaining])
+
+    return " ".join(result) if result else query[:60]
+
+
+def _simplify_for_wikipedia(query: str, max_words: int = 4) -> str:
+    """Extrai termos-chave do texto para busca Wikipedia.
+
+    Content words first (tempestade solar), then proper nouns (NASA).
+    Removes numbers — they cause Wikipedia to return unrelated articles.
+    """
+    keywords = _extract_keywords(query, max_words=max_words + 4)
+    words = [w for w in keywords.split() if not w.replace("%", "").replace(",", "").replace(".", "").isdigit()]
+    # Content words first — Wikipedia matches topics, not entities
+    content = [w for w in words if w[0].islower()]
+    proper = [w for w in words if w[0].isupper()]
+    reordered = content + proper
+    return " ".join(reordered[:max_words]) if reordered else keywords
 
 
 # ── Analisadores ──────────────────────────────────────────────────────────────
@@ -118,43 +256,126 @@ async def _run_nlp(ctx: ConversationContext) -> dict:
 
 
 async def _run_gdelt(query: str) -> dict:
-    """GDELT DOC API — busca em PT e EN em paralelo, sem chave necessária."""
+    """GDELT DOC API + Google News RSS + NewsAPI — busca em PT e EN em paralelo.
+
+    Três fontes de notícias rodam em paralelo:
+    1. GDELT DOC API (gratuito, sem chave — pode estar fora do ar)
+    2. Google News RSS (gratuito, sem chave — fallback confiável)
+    3. NewsAPI.org (requer NEWSAPI_KEY — fontes internacionais de qualidade)
+
+    Os resultados são mesclados e desduplicados para o frontend.
+    Se uma fonte falhar, as outras garantem cobertura.
+
+    Queries are simplified to keywords for much better results — full
+    sentences return few/no matches from news search APIs.
+    """
     from src.analysis.gdelt import GDELTResponse
 
     if not query:
         empty = serialize_gdelt_response(GDELTResponse())
         return {"por": empty, "en": empty}
 
+    # Keyword queries return far more results than full sentences.
+    # For news search, proper nouns (NASA, Musk) are more important than
+    # content words, so we use _extract_keywords directly (not _simplify_for_wikipedia).
+    news_query = _extract_keywords(query, max_words=6)
+    # NewsAPI uses AND-matching — shorter queries return far more results
+    newsapi_query = _extract_keywords(query, max_words=4)
+    logger.debug("News query: %r | NewsAPI: %r (from %d chars)", news_query, newsapi_query, len(query))
+
+    # ── Todas as fontes de notícias em paralelo ────────────────────────────
     por_task = asyncio.create_task(
-        search_articles(query, source_language="por")
+        search_articles(news_query, source_language="por")
     )
     en_task = asyncio.create_task(
-        search_articles(query, source_language="english")
+        search_articles(news_query, source_language="english")
     )
-    por_result, en_result = await asyncio.gather(por_task, en_task, return_exceptions=True)
+    gnews_pt_task = asyncio.create_task(
+        search_google_news(news_query, max_results=10, lang="pt-BR")
+    )
+    gnews_en_task = asyncio.create_task(
+        search_google_news(news_query, max_results=10, lang="en-US")
+    )
+    newsapi_pt_task = asyncio.create_task(
+        search_newsapi(newsapi_query, language="pt", max_results=10)
+    )
+    newsapi_en_task = asyncio.create_task(
+        search_newsapi(newsapi_query, language="en", max_results=10)
+    )
+
+    por_result, en_result, gnews_pt, gnews_en, newsapi_pt, newsapi_en = await asyncio.gather(
+        por_task, en_task, gnews_pt_task, gnews_en_task, newsapi_pt_task, newsapi_en_task,
+        return_exceptions=True,
+    )
+
+    por_resp = (
+        serialize_gdelt_response(por_result) if not isinstance(por_result, Exception)
+        else {"query": query, "error": str(por_result), "articles": []}
+    )
+    en_resp = (
+        serialize_gdelt_response(en_result) if not isinstance(en_result, Exception)
+        else {"query": query, "error": str(en_result), "articles": []}
+    )
+
+    # ── Helper: merge articles into a response with deduplication ──────────
+    def _merge_articles(target: dict, source_response, label: str) -> None:
+        if isinstance(source_response, Exception) or not source_response.articles:
+            return
+        serialized = serialize_gdelt_response(source_response)
+        new_articles = serialized.get("articles", [])
+        existing_keys = set()
+        for a in target.get("articles", []):
+            key = (a.get("domain", ""), a.get("title", "")[:40])
+            existing_keys.add(key)
+        added = 0
+        for a in new_articles:
+            key = (a.get("domain", ""), a.get("title", "")[:40])
+            if key not in existing_keys:
+                target["articles"].append(a)
+                existing_keys.add(key)
+                added += 1
+        if added:
+            logger.debug("%s: merged %d new articles", label, added)
+        # Clear error if this source provided results but GDELT failed
+        if target.get("error") and new_articles:
+            target["error"] = ""
+
+    # Merge Google News PT into PT response, EN into EN response
+    _merge_articles(por_resp, gnews_pt, "Google News PT")
+    _merge_articles(en_resp, gnews_en, "Google News EN")
+
+    # Merge NewsAPI PT into PT response, EN into EN response
+    _merge_articles(por_resp, newsapi_pt, "NewsAPI-PT")
+    _merge_articles(en_resp, newsapi_en, "NewsAPI-EN")
 
     return {
-        "por": serialize_gdelt_response(por_result) if not isinstance(por_result, Exception)
-               else {"query": query, "error": str(por_result), "articles": []},
-        "en": serialize_gdelt_response(en_result) if not isinstance(en_result, Exception)
-              else {"query": query, "error": str(en_result), "articles": []},
+        "por": por_resp,
+        "en": en_resp,
     }
 
 
 async def _run_wikipedia(query: str) -> dict:
-    """Wikipedia API — busca em PT e EN em paralelo, sem chave necessária."""
+    """Wikipedia API — busca em PT e EN em paralelo, sem chave necessária.
+
+    Usa query simplificada (primeiras palavras-chave) para melhorar resultados
+    da busca, já que Wikipedia search funciona melhor com termos curtos.
+    """
     if not query:
         return {"pt": {"query": query, "results": [], "error": ""}, "en": {"query": query, "results": [], "error": ""}}
 
-    pt_task = asyncio.create_task(search_wikipedia(query, lang="pt"))
-    en_task = asyncio.create_task(search_wikipedia(query, lang="en"))
+    # Wikipedia search works best with short keyword queries, not full sentences.
+    # Extract key noun phrases: keep capitalized words, numbers, and quoted terms.
+    wiki_query = _simplify_for_wikipedia(query)
+
+    pt_task = asyncio.create_task(search_wikipedia(wiki_query, lang="pt"))
+    en_task = asyncio.create_task(search_wikipedia(wiki_query, lang="en"))
     pt_result, en_result = await asyncio.gather(pt_task, en_task, return_exceptions=True)
 
     return {
         "pt": pt_result if not isinstance(pt_result, Exception)
-              else {"query": query, "error": str(pt_result), "results": []},
+              else {"query": wiki_query, "error": str(pt_result), "results": []},
         "en": en_result if not isinstance(en_result, Exception)
-              else {"query": query, "error": str(en_result), "results": []},
+              else {"query": wiki_query, "error": str(en_result), "results": []},
     }
 
 
