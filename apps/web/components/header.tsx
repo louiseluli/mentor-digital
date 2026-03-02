@@ -25,6 +25,18 @@ export default function Header() {
 
         <nav className="flex items-center gap-1">
           <Link
+            href="/aprender"
+            className="hidden sm:block text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md"
+          >
+            Aprender
+          </Link>
+          <Link
+            href="/guia-acao"
+            className="hidden sm:block text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md"
+          >
+            Guia de Ação
+          </Link>
+          <Link
             href="/analytics"
             className="hidden sm:block text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md"
           >

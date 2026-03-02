@@ -15,6 +15,7 @@ import type { AnalyticsSummary } from "@/lib/api";
 const PLATFORM_LABELS: Record<string, string> = {
   telegram: "Telegram",
   whatsapp: "WhatsApp",
+  web: "Web",
 };
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
@@ -56,6 +57,22 @@ const RISK_COLORS: Record<string, { bar: string; label: string; dot: string }> =
     label: "text-green-700",
     dot: "bg-green-500",
   },
+};
+
+const FEELING_LABELS: Record<string, string> = {
+  empowered: "Empoderado/a",
+  grateful: "Grato/a",
+  relieved: "Aliviado/a",
+  confused: "Confuso/a",
+  frustrated: "Frustrado/a",
+};
+
+const FEELING_ICONS: Record<string, string> = {
+  empowered: "💪",
+  grateful: "🙏",
+  relieved: "😌",
+  confused: "🤔",
+  frustrated: "😤",
 };
 
 // ── Subcomponentes ────────────────────────────────────────────────────────────
@@ -164,6 +181,9 @@ export default function AnalyticsDashboard({ summary }: Props) {
     0
   );
 
+  const fb = summary.feedback;
+  const persistent = summary.persistent;
+
   return (
     <div className="space-y-6">
       {/* Total */}
@@ -173,8 +193,71 @@ export default function AnalyticsDashboard({ summary }: Props) {
           <p className="text-muted-foreground text-sm mt-1">
             análises realizadas nos últimos {summary.period_days} dias
           </p>
+          {persistent && persistent.total_evidence_items > 0 && (
+            <p className="text-muted-foreground text-xs mt-2">
+              {persistent.total_evidence_items} evidências coletadas de fontes externas
+            </p>
+          )}
         </CardContent>
       </Card>
+
+      {/* Feedback do público */}
+      {fb && fb.total > 0 && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Feedback do público
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center mb-4">
+              <div>
+                <p className="text-3xl font-bold tabular-nums">
+                  {fb.avg_rating > 0 ? `${fb.avg_rating.toFixed(1)}` : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  nota média (1-5)
+                </p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold tabular-nums">{fb.total}</p>
+                <p className="text-xs text-muted-foreground mt-1">respostas</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold tabular-nums">
+                  {fb.would_recommend_pct > 0 ? `${fb.would_recommend_pct}%` : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  recomendariam
+                </p>
+              </div>
+            </div>
+
+            {Object.keys(fb.feeling_distribution).length > 0 && (
+              <>
+                <Separator className="my-3" />
+                <p className="text-xs text-muted-foreground mb-2">
+                  Como as pessoas se sentiram após a análise:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(fb.feeling_distribution)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([feeling, count]) => (
+                      <span
+                        key={feeling}
+                        className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full"
+                      >
+                        <span>{FEELING_ICONS[feeling] ?? "❓"}</span>
+                        <span>{FEELING_LABELS[feeling] ?? feeling}</span>
+                        <span className="font-medium tabular-nums">({count})</span>
+                      </span>
+                    ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Nível de risco */}
       <SectionCard title="Nível de risco detectado">
@@ -237,6 +320,12 @@ export default function AnalyticsDashboard({ summary }: Props) {
             label="GDELT encontrou cobertura na mídia"
             value={summary.gdelt_coverage}
           />
+          {persistent && persistent.avg_confidence > 0 && (
+            <CoverageCard
+              label="Confiança média nas análises"
+              value={persistent.avg_confidence}
+            />
+          )}
         </CardContent>
       </Card>
 

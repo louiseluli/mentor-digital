@@ -14,7 +14,9 @@ import EvidenceScale from "@/components/evidence-scale";
 import FactCheckSection from "@/components/factcheck-section";
 import GDELTSection from "@/components/gdelt-section";
 import WikipediaSection from "@/components/wikipedia-section";
+import FeedbackForm from "@/components/feedback-form";
 import type { AnalysisResult, FactCheckClaim } from "@/lib/api";
+import Link from "next/link";
 
 const CLIENT_BASE_URL =
   process.env.NEXT_PUBLIC_BOT_API_URL ?? "http://localhost:8000";
@@ -208,7 +210,29 @@ export default function AnalysisContent({ contentId, initialData }: Props) {
               .
             </p>
             <p>Resultados disponíveis por 7 dias.</p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Link
+                href={`/balanca/${contentId}`}
+                className="text-primary hover:underline font-medium"
+              >
+                Ver Balança da Evidência →
+              </Link>
+              <Link
+                href="/aprender"
+                className="text-primary hover:underline"
+              >
+                Módulos de aprendizagem →
+              </Link>
+              <Link
+                href="/guia-acao"
+                className="text-primary hover:underline"
+              >
+                Guia de ação →
+              </Link>
+            </div>
           </footer>
+
+          <FeedbackForm contentId={contentId} />
         </div>
 
         <div className="lg:sticky lg:top-20">

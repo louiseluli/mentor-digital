@@ -19,7 +19,8 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Query, Request, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse, Response
+from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -82,6 +83,10 @@ def _build_telegram_app():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _telegram_app
+    # Initialize database (creates tables if missing)
+    from src.database.engine import init_db
+    init_db()
+    # Initialize Telegram
     _telegram_app = _build_telegram_app()
     await _telegram_app.initialize()
     logger.info("Telegram Application inicializada (webhook mode).")
@@ -330,6 +335,18 @@ async def submit_analysis(request: Request):
     ctx = ConversationContext(user_id="web", platform="web", content_raw=text)
     results = await analyze_content(ctx)
     _get_session_mgr().save_analysis(ctx.content_id, results)
+
+    # Also persist to database for long-term analytics + balance of evidence
+    try:
+        from src.database.repository import Repository
+        repo = Repository()
+        try:
+            repo.save_analysis(ctx.content_id, results, platform="web")
+        finally:
+            repo.close()
+    except Exception as exc:
+        logger.warning("DB persistence failed (non-blocking): %s", exc)
+
     return {"content_id": ctx.content_id}
 
 
@@ -446,7 +463,180 @@ async def analytics_summary(days: int = 30):
     """
     from src.analytics import get_summary
     mgr = _get_session_mgr()
-    return get_summary(mgr.redis, days=min(days, 365))
+    redis_summary = get_summary(mgr.redis, days=min(days, 365))
+
+    # Merge with persistent analytics (DB)
+    try:
+        from src.database.repository import Repository
+        repo = Repository()
+        try:
+            db_analytics = repo.get_persistent_analytics(days=min(days, 365))
+            feedback_summary = repo.get_feedback_summary(days=min(days, 365))
+        finally:
+            repo.close()
+        redis_summary["persistent"] = db_analytics
+        redis_summary["feedback"] = feedback_summary
+    except Exception as exc:
+        logger.warning("Failed to fetch persistent analytics: %s", exc)
+
+    return redis_summary
+
+
+# ── Balance of Evidence ────────────────────────────────────────────────────────
+
+
+@app.get("/balance/{content_id}")
+@limiter.limit("60/minute")
+async def get_balance(request: Request, content_id: str):
+    """Retorna dados da Balança da Evidência para um content_id.
+
+    Organiza evidências em supporting/contradicting/neutral com balance_score.
+    """
+    from src.database.repository import Repository
+
+    repo = Repository()
+    try:
+        balance_data = repo.get_balance_data(content_id)
+    finally:
+        repo.close()
+
+    if balance_data is None:
+        # Fallback: try to build balance from Redis analysis data
+        data = _get_session_mgr().get_analysis(content_id)
+        if data is None:
+            raise HTTPException(status_code=404, detail="Análise não encontrada")
+        # Persist to DB for future balance queries
+        try:
+            repo2 = Repository()
+            try:
+                repo2.save_analysis(content_id, data)
+                balance_data = repo2.get_balance_data(content_id)
+            finally:
+                repo2.close()
+        except Exception as exc:
+            logger.error("Failed to persist analysis for balance: %s", exc)
+            raise HTTPException(status_code=500, detail="Erro ao processar evidências")
+
+    return balance_data
+
+
+# ── Feedback ───────────────────────────────────────────────────────────────────
+
+
+class FeedbackRequest(BaseModel):
+    content_id: str | None = None
+    usefulness_rating: int | None = None  # 1-5
+    feeling_after: str | None = None
+    would_recommend: bool | None = None
+    free_text: str | None = None
+
+
+@app.post("/feedback")
+@limiter.limit("10/minute")
+async def submit_feedback(request: Request, body: FeedbackRequest):
+    """Registra feedback anonimizado do usuário sobre a análise.
+
+    Não armazena dados pessoais. Apenas métricas de utilidade.
+    """
+    from src.database.repository import Repository
+
+    if body.usefulness_rating is not None and not (1 <= body.usefulness_rating <= 5):
+        raise HTTPException(status_code=422, detail="Nota deve ser entre 1 e 5")
+    if body.free_text and len(body.free_text) > 1000:
+        raise HTTPException(status_code=422, detail="Texto muito longo (máximo 1000 caracteres)")
+
+    repo = Repository()
+    try:
+        repo.save_feedback(
+            content_id=body.content_id,
+            usefulness_rating=body.usefulness_rating,
+            feeling_after=body.feeling_after,
+            would_recommend=body.would_recommend,
+            free_text=body.free_text,
+        )
+    finally:
+        repo.close()
+
+    return {"status": "ok", "detail": "Feedback registrado. Obrigado!"}
+
+
+@app.get("/feedback/summary")
+async def feedback_summary(days: int = 30):
+    """Sumário anonimizado de feedback dos últimos N dias."""
+    from src.database.repository import Repository
+
+    repo = Repository()
+    try:
+        return repo.get_feedback_summary(days=min(days, 365))
+    finally:
+        repo.close()
+
+
+# ── Learning Modules ───────────────────────────────────────────────────────────
+
+
+@app.get("/learning/modules")
+async def list_modules():
+    """Lista todos os módulos de aprendizagem disponíveis."""
+    from src.database.repository import Repository
+
+    repo = Repository()
+    try:
+        modules = repo.get_all_modules()
+    finally:
+        repo.close()
+    return {"modules": modules}
+
+
+@app.get("/learning/modules/{slug}")
+async def get_module(slug: str):
+    """Retorna o conteúdo completo de um módulo de aprendizagem."""
+    from src.database.repository import Repository
+
+    repo = Repository()
+    try:
+        module = repo.get_module_by_slug(slug)
+    finally:
+        repo.close()
+
+    if module is None:
+        raise HTTPException(status_code=404, detail="Módulo não encontrado")
+    return module
+
+
+@app.post("/learning/progress")
+@limiter.limit("30/minute")
+async def update_progress(request: Request):
+    """Atualiza progresso do usuário em um módulo (anonimizado)."""
+    from src.database.repository import Repository
+
+    body = await request.json()
+    user_id = body.get("user_id", "anonymous")
+    module_slug = body.get("module_slug", "")
+    status = body.get("status", "in_progress")
+    score = body.get("score")
+    quiz_answers = body.get("quiz_answers")
+
+    if not module_slug:
+        raise HTTPException(status_code=422, detail="module_slug obrigatório")
+    if status not in ("not_started", "in_progress", "completed"):
+        raise HTTPException(status_code=422, detail="status inválido")
+
+    repo = Repository()
+    try:
+        result = repo.update_user_progress(
+            pseudonymous_user_id=user_id,
+            module_slug=module_slug,
+            status=status,
+            score=score,
+            quiz_answers=quiz_answers,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    finally:
+        repo.close()
+
+    return result
 
 
 @app.get("/webhook/whatsapp")
