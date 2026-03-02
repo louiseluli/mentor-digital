@@ -45,3 +45,13 @@ logs/
 
 # Redis
 dump.rdb
+
+# Project docs & presentation (not for repo)
+AGENT_BLUEPRINT.md
+BUILD_PROTOCOL.md
+DEPLOY.md
+DETECTION_IMPROVEMENT_PLAN.md
+SESSION_LOG.md
+compass_artifact_wf-*.md
+plano_agente_fake_news.md
+presentation.html
